@@ -53,7 +53,7 @@ refGain1        = 1/tauRef^2;
 refGain2        = 2/tauRef;
 % Pure Pursuit Controller
 initPathVar     = 0;
-maxLeadLength   = 0.1;
+maxLeadLength   = 0.05;
 maxIntAngle     = 10*pi/180;
 % Min and max alpha for the wing controller
 wingAlphaPlusStall  =  10*pi/180;

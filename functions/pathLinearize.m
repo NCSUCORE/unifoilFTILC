@@ -14,12 +14,17 @@ u       = tsc.twistSP.Data(:);
 tau     = tauRef;
 M       = mass;
 
-a = FxParams(1);
-b = FxParams(2);
-c = basisParams(1);
-d = basisParams(3);
-e = basisParams(2);
-f = basisParams(4);
+% Read in all the variables stored in FxParams
+varNames = fields(FxParams);
+for ii = 1:numel(varNames)
+   eval(sprintf('%s = FxParams.%s;',varNames{ii},varNames{ii})); 
+end
+
+l = basisParams(1);
+m = basisParams(3);
+f = basisParams(2);
+n = basisParams(4);
+
 r = basisParams(5);
 
 shapeSwitch = basisParams(6);

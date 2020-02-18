@@ -70,7 +70,7 @@ numIters = 45;
 
 pathStep = 1/400;
 % Linear force parmeterization
-FxParams = [2000 10];
+FxParams = [3000 10];
 
 % Waypoint Specification
 posWayPtPathVars = [0.25 0.5 0.75 1];
@@ -82,11 +82,7 @@ wyPtElevation   = pi/2-acos(wyPtPosVecs(:,3)./sqrt(sum(wyPtPosVecs.^2,2)));
 r               = reshape([wyPtAzimuth(:),wyPtElevation(:)]',[2*numel(posWayPtPathVars) 1]);
 
 % Performance index components
-% spedWeight = 1/(numel(0:pathStep:1));
-% wyptWeight = 2/(2*numel(posWayPtPathVars)*(pi/180)^2);
-% inptWeight = 1/(sum((pi/180).^2*ones(size(0:pathStep:1))));
-
-spedWeight = 8/(2000);
+spedWeight = 5/(2000);
 wyptWeight = 0.05/(1e-4);
 inptWeight = 0.025/(sum((pi/180).^2*ones(size(0:pathStep:1))));
 
@@ -94,7 +90,7 @@ inptWeight = 0.025/(sum((pi/180).^2*ones(size(0:pathStep:1))));
 path        = lemOfGerono(linspace(0,1),basisParams);
 pathAz = atan2d(path(:,2),path(:,1));
 pathEl = 90 - acosd(path(:,3)./sqrt(sum(path.^2,2)));
-h.plot  = subplot(3,3,[1 2 4 5]);
+h.plot  = subplot(3,3,[1 2]);
 plot(pathAz,pathEl,...
     'LineWidth',2,'Color','r','LineStyle',':','DisplayName','Target Path')
 grid on;hold on
@@ -160,6 +156,15 @@ h.uAx.XAxis.TickValues=0:0.125:1;
 set(gca, 'TickLabelInterpreter','latex')
 legend
 h.uAx.XAxis.TickLabels = {'0','$\frac{1}{8}$','$\frac{1}{4}$','$\frac{3}{8}$','$\frac{1}{2}$','$\frac{5}{8}$','$\frac{3}{4}$','$\frac{7}{8}$','$1$'};
+
+
+h.FxErrAx   = subplot(3,3,4);
+h.FxErr = scatter(nan,nan);
+grid on;hold on
+xlim([1 numIters]);
+xlabel('Iteration Num, j')
+ylabel('Fx Fit Err, [N]')
+
 set(findall(gcf,'Type','Axes'),'FontSize',18)
 
 %% Run the ILC algorithm
@@ -178,6 +183,9 @@ for ii = 1:numIters
     
     % Crop to just one lap
     psc = processTSC(tsc,pathStep);
+    
+    % Fit the function Fx to match the data   
+    [FxParams, FxErr] = fitFxPhase(psc);
     
     % Create continuous, linear, path parmeterized model
     [Acp,Bcp] = pathLinearize(psc,basisParams,FxParams,tauRef,baseMass+addedMass);
@@ -256,6 +264,10 @@ for ii = 1:numIters
     
     h.uFFNext.XData = UNext.Time;
     h.uFFNext.YData = UNext.Data*180/pi;
+    
+    % Plot the Fx Fit Error
+    h.FxErr.XData = [h.FxErr.XData ii];
+    h.FxErr.YData = [h.FxErr.YData FxErr];
     
     
     drawnow

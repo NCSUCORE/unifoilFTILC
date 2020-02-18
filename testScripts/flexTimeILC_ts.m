@@ -82,9 +82,9 @@ wyPtElevation   = pi/2-acos(wyPtPosVecs(:,3)./sqrt(sum(wyPtPosVecs.^2,2)));
 r               = reshape([wyPtAzimuth(:),wyPtElevation(:)]',[2*numel(posWayPtPathVars) 1]);
 
 % Performance index components
-spedWeight = 5/(2000);
+spedWeight = 7.5/(2000*200);
 wyptWeight = 0.05/(1e-4);
-inptWeight = 0.025/(sum((pi/180).^2*ones(size(0:pathStep:1))));
+inptWeight = 0.02/(sum((pi/180).^2*ones(size(0:pathStep:1))));
 
 %% Set up some plots
 path        = lemOfGerono(linspace(0,1),basisParams);
@@ -165,6 +165,15 @@ xlim([1 numIters]);
 xlabel('Iteration Num, j')
 ylabel('Fx Fit Err, [N]')
 
+h.meanSpeedAx   = subplot(3,3,5);
+h.meanSpeed = scatter(nan,nan);
+grid on;hold on
+xlim([1 numIters]);
+xlabel('Iteration Num, j')
+ylabel({'Average','Speed, [m/s]'})
+
+
+
 set(findall(gcf,'Type','Axes'),'FontSize',18)
 
 %% Run the ILC algorithm
@@ -178,6 +187,10 @@ for ii = 1:numIters
     
     % Post-process Data (get it into a signalcontainer object)
     tsc = signalcontainer(logsout);
+    
+    % add dsdt as a signal
+    tsc.addprop('dsdt');
+    tsc.dsdt = tsc.pathVar.diff;
     
     %% Do operations for flexible time ILC
     
@@ -198,14 +211,14 @@ for ii = 1:numIters
     
     % Build the weighting matrix for the performance index
     Psiv = stateSelectionMatrix(3,5,numel(Adp.Time));
-    f    = spedWeight*ones(1,size(Psiv,1));
+    f    = spedWeight*reshape([0*psc.dsdt.Data(:) 0*psc.dsdt.Data(:) 1./psc.dsdt.Data(:) 0*psc.dsdt.Data(:) 0*psc.dsdt.Data(:)]',[1 5*numel(psc.dsdt.Data)]);
     posWayPtPathIdx = cnvrtPathVar2Indx(posWayPtPathVars,Adp.Time);
     PsiW = wyptSelectionMatrix([1 2],posWayPtPathIdx,5,numel(Adp.Time))*stateSelectionMatrix([1 2],5,numel(Adp.Time));
     QW = wyptWeight*diag(ones(size(PsiW,1),1));
     Qu = inptWeight*diag(ones(numel(Adp.Time),1));
     GHatj = G'*PsiW'*QW*PsiW*G;
     L0 = (Qu-GHatj)^(-1);
-    Lc = L0*(1/2)*(f*Psiv*G)';
+    Lc =  L0*(1/2)*(f*Psiv*G)';
     Le = -L0*G'*PsiW'*QW;
         
     % Apply learning filters to calculate deviation in input signal
@@ -269,6 +282,8 @@ for ii = 1:numIters
     h.FxErr.XData = [h.FxErr.XData ii];
     h.FxErr.YData = [h.FxErr.YData FxErr];
     
-    
+    h.meanSpeed.XData = [h.meanSpeed.XData ii];
+    h.meanSpeed.YData = [h.meanSpeed.YData tsc.speed.mean];
+
     drawnow
 end

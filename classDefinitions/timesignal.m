@@ -99,6 +99,10 @@ classdef timesignal < timeseries
             end
         end
         
+        function val = mean(obj)
+            val = trapz(obj.Time,obj.Data)./(obj.Time(end)-obj.Time(1));
+        end
+        
         function plotEigs(obj)
            for ii = 1:numel(obj.Time)
                [V,D] = eig(obj.getdatasamples(ii));

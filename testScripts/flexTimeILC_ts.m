@@ -83,7 +83,7 @@ r               = reshape([wyPtAzimuth(:),wyPtElevation(:)]',[2*numel(posWayPtPa
 
 % Performance index components
 spedWeight = 7.5/(2000*200);
-wyptWeight = 0.05/(1e-4);
+wyptWeight = 0.05/(1e-6);
 inptWeight = 0.02/(sum((pi/180).^2*ones(size(0:pathStep:1))));
 
 %% Set up some plots
@@ -214,7 +214,8 @@ for ii = 1:numIters
     f    = spedWeight*reshape([0*psc.dsdt.Data(:) 0*psc.dsdt.Data(:) 1./psc.dsdt.Data(:) 0*psc.dsdt.Data(:) 0*psc.dsdt.Data(:)]',[1 5*numel(psc.dsdt.Data)]);
     posWayPtPathIdx = cnvrtPathVar2Indx(posWayPtPathVars,Adp.Time);
     PsiW = wyptSelectionMatrix([1 2],posWayPtPathIdx,5,numel(Adp.Time))*stateSelectionMatrix([1 2],5,numel(Adp.Time));
-    QW = wyptWeight*diag(ones(size(PsiW,1),1));
+%     QW = wyptWeight*diag(ones(size(PsiW,1),1));
+    QW = wyptWeight*diag(reshape([psc.dsdt.getdatasamples(posWayPtPathIdx) psc.dsdt.getdatasamples(posWayPtPathIdx)]',[8 1]));
     Qu = inptWeight*diag(ones(numel(Adp.Time),1));
     GHatj = G'*PsiW'*QW*PsiW*G;
     L0 = (Qu-GHatj)^(-1);

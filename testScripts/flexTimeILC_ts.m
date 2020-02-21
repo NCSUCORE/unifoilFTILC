@@ -82,8 +82,8 @@ wyPtElevation   = pi/2-acos(wyPtPosVecs(:,3)./sqrt(sum(wyPtPosVecs.^2,2)));
 r               = reshape([wyPtAzimuth(:),wyPtElevation(:)]',[2*numel(posWayPtPathVars) 1]);
 
 % Performance index components
-spedWeight = 7.5/(2000*200);
-wyptWeight = 0.05/(1e-6);
+spedWeight = 7.50/(2000*20);
+wyptWeight = 0.05/(1e-5);
 inptWeight = 0.02/(sum((pi/180).^2*ones(size(0:pathStep:1))));
 
 %% Set up some plots
@@ -117,8 +117,9 @@ h.speedTermW = scatter(nan,nan);
 grid on;hold on
 xlim([1 numIters]);
 xlabel('Iteration Num, j')
-ylabel('$J_v$ [m/s]')
+ylabel('$J_v$')
 yyaxis right
+ylabel('$J_v''$')
 h.speedTermU = scatter(nan,nan);
 
 h.delUAx   = subplot(3,3,8);
@@ -127,8 +128,9 @@ h.delUTermW = scatter(nan,nan);
 grid on;hold on
 xlim([1 numIters]);
 xlabel('Iteration Num, j')
-ylabel('$J_u$ [rad$^2$]')
+ylabel('$J_u$')
 yyaxis right
+ylabel('$J_u''$')
 h.delUTermU = scatter(nan,nan);
 
 h.errAx   = subplot(3,3,9);
@@ -137,8 +139,9 @@ h.errTermW = scatter(nan,nan);
 grid on;hold on
 xlim([1 numIters]);
 xlabel('Iteration Num, j')
-ylabel('$J_e$ [rad$^2$]')
+ylabel('$J_e$')
 yyaxis right
+ylabel('$J_e''$')
 h.errTermU = scatter(nan,nan);
 
 
@@ -151,8 +154,8 @@ yyaxis right
 h.uFFNext = plot(nan,nan,'Color','r','DisplayName','$u_{FF}^{j+1}$');
 xlim([0 1]);
 xlabel('Path Var')
-ylabel('$\delta u$ [deg]')
-h.uAx.XAxis.TickValues=0:0.125:1;
+ylabel('$\delta u$')
+h.uAx.XAxis.TickValues =0:0.125:1;
 set(gca, 'TickLabelInterpreter','latex')
 legend
 h.uAx.XAxis.TickLabels = {'0','$\frac{1}{8}$','$\frac{1}{4}$','$\frac{3}{8}$','$\frac{1}{2}$','$\frac{5}{8}$','$\frac{3}{4}$','$\frac{7}{8}$','$1$'};
@@ -211,11 +214,10 @@ for ii = 1:numIters
     
     % Build the weighting matrix for the performance index
     Psiv = stateSelectionMatrix(3,5,numel(Adp.Time));
-    f    = spedWeight*reshape([0*psc.dsdt.Data(:) 0*psc.dsdt.Data(:) 1./psc.dsdt.Data(:) 0*psc.dsdt.Data(:) 0*psc.dsdt.Data(:)]',[1 5*numel(psc.dsdt.Data)]);
+    f    = spedWeight*repmat([0 0 1 0 0],[1 numel(psc.pathVar.Time)]);
     posWayPtPathIdx = cnvrtPathVar2Indx(posWayPtPathVars,Adp.Time);
     PsiW = wyptSelectionMatrix([1 2],posWayPtPathIdx,5,numel(Adp.Time))*stateSelectionMatrix([1 2],5,numel(Adp.Time));
-%     QW = wyptWeight*diag(ones(size(PsiW,1),1));
-    QW = wyptWeight*diag(reshape([psc.dsdt.getdatasamples(posWayPtPathIdx) psc.dsdt.getdatasamples(posWayPtPathIdx)]',[8 1]));
+    QW = wyptWeight*diag(ones(size(PsiW,1),1));
     Qu = inptWeight*diag(ones(numel(Adp.Time),1));
     GHatj = G'*PsiW'*QW*PsiW*G;
     L0 = (Qu-GHatj)^(-1);
@@ -227,14 +229,14 @@ for ii = 1:numIters
     delU = timesignal(timeseries(delUData,Adp.Time));
     
     % Calculate some components of the performance index
-    Jv = -f*Psiv*psc.stateVec.Data(:);
+    Jv      = -f                   *Psiv*psc.stateVec.Data(:);
     JvPrime = -ones(1,size(Psiv,1))*Psiv*psc.stateVec.Data(:);
     
-    Ju = delU.Data(:)'*Qu*delU.Data(:);
-    JuPrime = delU.Data(:)'*delU.Data(:);
+    Ju      = delU.Data(:)'*Qu*delU.Data(:);
+    JuPrime = delU.Data(:)'   *delU.Data(:);
     
-    Je = (r-PsiW*psc.stateVec.Data(:))'*QW*(r-PsiW*psc.stateVec.Data(:));
-    JePrime = (r-PsiW*psc.stateVec.Data(:))'*(r-PsiW*psc.stateVec.Data(:));
+    Je      = (r-PsiW*psc.stateVec.Data(:))'*QW*(r-PsiW*psc.stateVec.Data(:));
+    JePrime = (r-PsiW*psc.stateVec.Data(:))'*   (r-PsiW*psc.stateVec.Data(:));
     
     % Resample deviation in control signal into standard domain
     UNext = UNext.resample(delU.Time);
@@ -248,8 +250,8 @@ for ii = 1:numIters
     % Plot the overall performance index
     h.perfIndx.XData = [h.perfIndx.XData ii];
     h.perfIndx.YData = [h.perfIndx.YData Jv+Ju+Je];
-    h.simTime.XData = [h.simTime.XData ii];
-    h.simTime.YData = [h.simTime.YData tsc.pathVar.Time(end)];
+    h.simTime.XData  = [h.simTime.XData  ii];
+    h.simTime.YData  = [h.simTime.YData  tsc.pathVar.Time(end)];
     
     % Plot the speed term
     h.speedTermW.XData = [h.speedTermW.XData ii];

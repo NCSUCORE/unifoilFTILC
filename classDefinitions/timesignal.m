@@ -375,7 +375,7 @@ classdef timesignal < timeseries
         end
         
         %Method to calculate 3 point numerical derivative
-        function derivSignal = diff(obj)
+        function [derivSignal,ddiffs] = diff(obj)
             derivSignal=timesignal(obj);
             tdiffvec = diff(obj.Time(:));
             %tdiffs(1) = tdiffvec(1)/2

@@ -1,39 +1,28 @@
 % Calculate some components of the performance index
 
+% Actual performance index components
 % Speed term
-Jv      = -fv*Psiv*psc.stateVec.Data(:);
-JvPrime = Jv/spedWeight;
-
-% Terminal term
-rt      = zeros(size(Psit,1),1);
-rt(end-4) = -wyPtAzimuth(end);
-rt(end-3) =  wyPtElevation(end);
-Jt        = -fv*(Psit*(psc.stateVec.Data(:) + rt));
-PsitPrime = Psit;
-PsitPrime(end-4,end-4) = 1;
-PsitPrime(end-3,end-3) = -1;
-JtPrime   = -fv*(PsitPrime*(psc.stateVec.Data(:) + rt));
-
+JvAct  = -fv*Psiv*psc.stateVec.Data(:);
 % Control deviation term
-Ju      = delU.Data(:)'*Qu*delU.Data(:);
-JuPrime = Ju/inptWeight;
-
+JuAct  = delU.Data(:)'*Qu*delU.Data(:);
 % Waypoint tracking error term
-Je      = (r-PsiW*psc.stateVec.Data(:))'*QW*(r-PsiW*psc.stateVec.Data(:));
-JePrime = Je/wyptWeight;
-
+JeAct  = (r-PsiW*psc.stateVec.Data(:))'*QW*(r-PsiW*psc.stateVec.Data(:));
 % State trajectory predicted for next iteration
 xNext = psc.stateVec.Data(:) + G *delU.Data;
 
+% Predicted performance over next iteration
+% Speed term
+JvPred  = -fv*Psiv*xNext(:);
+% Control deviation term
+JuPred = delU.Data(:)'*Qu*delU.Data(:);
+% Waypoint tracking error term
+JePred = (r-PsiW*xNext(:))'*QW*(r-PsiW*xNext(:));
+
 % Calculate predicted and actual distances tavelled
-azNext  = timesignal(timeseries(xNext(1:5:end),psc.pathVar.Time));
-elNext  = timesignal(timeseries(xNext(2:5:end),psc.pathVar.Time));
-dadt    = azNext.diff.Data./psc.pathVar.diff.Data;
-dedt    = elNext.diff.Data./psc.pathVar.diff.Data;
-dPred   = radius*trapz(psc.pathVar.Data,sqrt(dadt.^2+dedt.^2));
-dadt = psc.azimuth.diff.Data./psc.pathVar.diff.Data;
-dedt = psc.elevation.diff.Data./psc.pathVar.diff.Data;
-dLast = radius*trapz(psc.pathVar.Data,sqrt(dadt.^2+dedt.^2));
+dPred = arcLength(xNext(1:5:end),xNext(2:5:end),basisParams(5));
+dPred = dPred(end);
+dLast = arcLength(tsc.azimuth.Data,tsc.elevation.Data,basisParams(5));
+dLast = dLast(end);
 
 % Update flight paths
 h.predicPath_iPls1.XData = xNext(1:5:end)*180/pi;
@@ -42,34 +31,29 @@ h.predicPath_iPls1Zm.XData = xNext(1:5:end)*180/pi;
 h.predicPath_iPls1Zm.YData = xNext(2:5:end)*180/pi;
 
 % Update the overall performance index
-h.perfIndx.XData = [h.perfIndx.XData ii];
-h.perfIndx.YData = [h.perfIndx.YData Jv+Jt+Ju+Je];
-h.simTime.XData  = [h.simTime.XData  ii];
-h.simTime.YData  = [h.simTime.YData  tsc.pathVar.Time(end)];
+h.perfIndxAct.XData = [h.perfIndxAct.XData ii];
+h.perfIndxAct.YData = [h.perfIndxAct.YData JvAct+JuAct+JeAct];
+
+h.perfIndxPred.XData = [h.perfIndxPred.XData ii+1];
+h.perfIndxPred.YData = [h.perfIndxPred.YData JvPred+JuPred+JePred];
 
 % Update the speed term
-h.speedTermW.XData = [h.speedTermW.XData ii];
-h.speedTermW.YData = [h.speedTermW.YData Jv];
-h.speedTermU.XData = [h.speedTermU.XData ii];
-h.speedTermU.YData = [h.speedTermU.YData JvPrime];
-
-% Update the terminal incentive term
-h.termTermW.XData = [h.termTermW.XData ii];
-h.termTermW.YData = [h.termTermW.YData Jt];
-h.termTermU.XData = [h.termTermU.XData ii];
-h.termTermU.YData = [h.termTermU.YData JtPrime];
+h.speedTermAct.XData = [h.speedTermAct.XData ii];
+h.speedTermAct.YData = [h.speedTermAct.YData JvAct];
+h.speedTermPred.XData = [h.speedTermPred.XData ii+1];
+h.speedTermPred.YData = [h.speedTermPred.YData JvPred];
 
 % Update the error (waypoint tracking) term
-h.errTermW.XData = [h.errTermW.XData ii];
-h.errTermW.YData = [h.errTermW.YData Je];
-h.errTermU.XData = [h.errTermU.XData ii];
-h.errTermU.YData = [h.errTermU.YData JePrime];
+h.errTermAct.XData  = [h.errTermAct.XData ii];
+h.errTermAct.YData  = [h.errTermAct.YData JeAct];
+h.errTermPred.XData = [h.errTermPred.XData ii+1];
+h.errTermPred.YData = [h.errTermPred.YData JePred];
 
 % Update the delta u term
-h.delUTermW.XData = [h.delUTermW.XData ii];
-h.delUTermW.YData = [h.delUTermW.YData Ju];
-h.delUTermU.XData = [h.delUTermU.XData ii];
-h.delUTermU.YData = [h.delUTermU.YData JuPrime];
+h.delUTermAct.XData  = [h.delUTermAct.XData ii];
+h.delUTermAct.YData  = [h.delUTermAct.YData JuAct];
+h.delUTermPred.XData = [h.delUTermPred.XData ii+1];
+h.delUTermPred.YData = [h.delUTermPred.YData JuPred];
 
 % Update the control signals
 h.uFBPrev.XData = tsc.pathVar.Data;
@@ -86,14 +70,19 @@ h.distAct.XData  = [h.distAct.XData ii];
 h.distAct.YData  = [h.distAct.YData dLast];
 
 % Update the mean speed over the last iteration
-h.meanSpeed.XData = [h.meanSpeed.XData ii];
-h.meanSpeed.YData = [h.meanSpeed.YData tsc.speed.mean];
+h.meanSpeedAct.XData = [h.meanSpeedAct.XData ii];
+h.meanSpeedAct.YData = [h.meanSpeedAct.YData tsc.speed.mean];
+h.meanSpeedPred.XData = [h.meanSpeedPred.XData ii+1];
+h.meanSpeedPred.YData = [h.meanSpeedPred.YData mean(xNext(3:5:end))];
 
 % Update the dsdt and dtds plots
 h.dsdt.XData = psc.pathVar.Data(1:end-1);
 h.dsdt.YData = psc.dsdt.Data(1:end-1);
 h.dtds.XData = psc.pathVar.Data(1:end-1);
 h.dtds.YData = 1./psc.dsdt.Data(1:end-1);
+
+h.simTime.XData  = [h.simTime.XData  ii];
+h.simTime.YData  = [h.simTime.YData  tsc.pathVar.Time(end)];
 
 
 drawnow

@@ -82,11 +82,9 @@ wyPtElevation   = pi/2-acos(wyPtPosVecs(:,3)./sqrt(sum(wyPtPosVecs.^2,2)));
 r               = reshape([wyPtAzimuth(:),wyPtElevation(:)]',[2*numel(posWayPtPathVars) 1]);
 
 % Performance index components
-% spedWeight = 0.25/(2000*20);
-spedWeight = 0/(2000*20);
+spedWeight = 4/6.6e4;
 wyptWeight = 0.015/(1e-5);
-inptWeight = 0.01/(sum((pi/180).^2*ones(size(0:pathStep:1))));
-termWeight = 1/60;
+inptWeight = 0.1/(sum((pi/180).^2*ones(size(0:pathStep:1))));
 
 %% Set up some plots
 setUpPlots
@@ -138,12 +136,10 @@ for ii = 1:numIters
     
     % Build the weighting matrix for the performance index
     % Linear term
-    Psiv  = spedWeight*stateSelectionMatrix(3,5,numel(Adp.Time));
-    fv    = repmat(1./psc.dsdt.Data(:),[1 5])';
-    fv    = fv(:)';
-    Psit  = zeros(size(Psiv,1));
-    Psit(end-4,end-4) = termWeight;
-    Psit(end-3,end-3) = -termWeight;
+    Psiv   = spedWeight*stateSelectionMatrix(3,5,numel(Adp.Time));
+    [~,ds] = psc.arcLength.diff;
+    fv     = repmat(ds(:)./psc.dsdt.Data(:),[1 5])';
+    fv     = fv(:)';
     % Waypoint tracking term
     posWayPtPathIdx = cnvrtPathVar2Indx(posWayPtPathVars,Adp.Time);
     PsiW = wyptSelectionMatrix([1 2],posWayPtPathIdx,5,numel(Adp.Time))*stateSelectionMatrix([1 2],5,numel(Adp.Time));
@@ -153,7 +149,7 @@ for ii = 1:numIters
     GHatj = G'*PsiW'*QW*PsiW*G;
     % Filters
     L0 = (Qu-GHatj)^(-1);
-    Lc =  L0*(1/2)*(fv*(Psiv+Psit)*G)';
+    Lc =  L0*(1/2)*(fv*Psiv*G)';
     Le = -L0*G'*PsiW'*QW;
         
     % Apply learning filters to calculate deviation in input signal

@@ -66,7 +66,7 @@ rudderAlphaMinusStall   = -6*pi/180;
 [rudderCLCoeffs,rudderCDCoeffs] = fitTable(rudderTable,6*[-1 1]*pi/180);
 
 %% Flexible Time ILC Parameters
-numIters = 45;
+numIters = 20;
 
 pathStep = 1/400;
 % Linear force parmeterization
@@ -82,102 +82,15 @@ wyPtElevation   = pi/2-acos(wyPtPosVecs(:,3)./sqrt(sum(wyPtPosVecs.^2,2)));
 r               = reshape([wyPtAzimuth(:),wyPtElevation(:)]',[2*numel(posWayPtPathVars) 1]);
 
 % Performance index components
-spedWeight = 7.50/(2000*20);
-wyptWeight = 0.05/(1e-5);
-inptWeight = 0.02/(sum((pi/180).^2*ones(size(0:pathStep:1))));
+% spedWeight = 0.25/(2000*20);
+spedWeight = 0/(2000*20);
+wyptWeight = 0.015/(1e-5);
+inptWeight = 0.01/(sum((pi/180).^2*ones(size(0:pathStep:1))));
+termWeight = 1/60;
 
 %% Set up some plots
-path        = lemOfGerono(linspace(0,1),basisParams);
-pathAz = atan2d(path(:,2),path(:,1));
-pathEl = 90 - acosd(path(:,3)./sqrt(sum(path.^2,2)));
-h.plot  = subplot(3,3,[1 2]);
-plot(pathAz,pathEl,...
-    'LineWidth',2,'Color','r','LineStyle',':','DisplayName','Target Path')
-grid on;hold on
-% h.origin = scatter3(0,0,0,'MarkerFaceColor','k','MarkerEdgeColor','k','DisplayName','Origin');
-h.fltPathAx = gca;
-xlabel('Azimuth, [deg]')
-ylabel('Elevation, [deg]')
-% view(68,19)
+setUpPlots
 
-h.perfIndxAx = subplot(3,3,3);
-yyaxis left
-h.perfIndx   = scatter(nan,nan);
-grid on;hold on
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel('$J$')
-yyaxis right
-ylabel('$T_F$ [s]')
-h.simTime   = scatter(nan,nan);
-
-h.speedAx   = subplot(3,3,6);
-yyaxis left
-h.speedTermW = scatter(nan,nan);
-grid on;hold on
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel('$J_v$')
-yyaxis right
-ylabel('$J_v''$')
-h.speedTermU = scatter(nan,nan);
-
-h.delUAx   = subplot(3,3,8);
-yyaxis left
-h.delUTermW = scatter(nan,nan);
-grid on;hold on
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel('$J_u$')
-yyaxis right
-ylabel('$J_u''$')
-h.delUTermU = scatter(nan,nan);
-
-h.errAx   = subplot(3,3,9);
-yyaxis left
-h.errTermW = scatter(nan,nan);
-grid on;hold on
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel('$J_e$')
-yyaxis right
-ylabel('$J_e''$')
-h.errTermU = scatter(nan,nan);
-
-
-h.uAx      = subplot(3,3,7);
-yyaxis left
-h.uFBPrev = plot(nan,nan,'Color','k','DisplayName','$u_{FB}^{j}$');
-grid on;hold on
-h.uFFPrev = plot(nan,nan,'Color','b','DisplayName','$u_{FF}^{j}$');
-yyaxis right
-h.uFFNext = plot(nan,nan,'Color','r','DisplayName','$u_{FF}^{j+1}$');
-xlim([0 1]);
-xlabel('Path Var')
-ylabel('$\delta u$')
-h.uAx.XAxis.TickValues =0:0.125:1;
-set(gca, 'TickLabelInterpreter','latex')
-legend
-h.uAx.XAxis.TickLabels = {'0','$\frac{1}{8}$','$\frac{1}{4}$','$\frac{3}{8}$','$\frac{1}{2}$','$\frac{5}{8}$','$\frac{3}{4}$','$\frac{7}{8}$','$1$'};
-
-
-h.FxErrAx   = subplot(3,3,4);
-h.FxErr = scatter(nan,nan);
-grid on;hold on
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel('Fx Fit Err, [N]')
-
-h.meanSpeedAx   = subplot(3,3,5);
-h.meanSpeed = scatter(nan,nan);
-grid on;hold on
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel({'Average','Speed, [m/s]'})
-
-
-
-set(findall(gcf,'Type','Axes'),'FontSize',18)
 
 %% Run the ILC algorithm
 UNext = timesignal(timeseries(...
@@ -191,6 +104,17 @@ for ii = 1:numIters
     % Post-process Data (get it into a signalcontainer object)
     tsc = signalcontainer(logsout);
     
+    h.actualPath_iMin1.XData = h.actualPath_i.XData;
+    h.actualPath_iMin1.YData = h.actualPath_i.YData;
+    h.actualPath_iMin1Zm.XData = h.actualPath_iZm.XData;
+    h.actualPath_iMin1Zm.YData = h.actualPath_iZm.YData;
+    
+    h.actualPath_i.XData = tsc.azimuth.Data*180/pi;
+    h.actualPath_i.YData = tsc.elevation.Data*180/pi;
+    h.actualPath_iZm.XData = tsc.azimuth.Data*180/pi;
+    h.actualPath_iZm.YData = tsc.elevation.Data*180/pi;
+    
+    h.title.String = sprintf('$i = %d$',ii);
     % add dsdt as a signal
     tsc.addprop('dsdt');
     tsc.dsdt = tsc.pathVar.diff;
@@ -201,7 +125,7 @@ for ii = 1:numIters
     psc = processTSC(tsc,pathStep);
     
     % Fit the function Fx to match the data   
-    [FxParams, FxErr] = fitFxPhase(psc);
+    [FxParams, ~] = fitFxPhase(psc);
     
     % Create continuous, linear, path parmeterized model
     [Acp,Bcp] = pathLinearize(psc,basisParams,FxParams,tauRef,baseMass+addedMass);
@@ -213,80 +137,34 @@ for ii = 1:numIters
     [F,G] = lift(Adp,Bdp);
     
     % Build the weighting matrix for the performance index
-    Psiv = stateSelectionMatrix(3,5,numel(Adp.Time));
-    f    = spedWeight*repmat([0 0 1 0 0],[1 numel(psc.pathVar.Time)]);
+    % Linear term
+    Psiv  = spedWeight*stateSelectionMatrix(3,5,numel(Adp.Time));
+    fv    = repmat(1./psc.dsdt.Data(:),[1 5])';
+    fv    = fv(:)';
+    Psit  = zeros(size(Psiv,1));
+    Psit(end-4,end-4) = termWeight;
+    Psit(end-3,end-3) = -termWeight;
+    % Waypoint tracking term
     posWayPtPathIdx = cnvrtPathVar2Indx(posWayPtPathVars,Adp.Time);
     PsiW = wyptSelectionMatrix([1 2],posWayPtPathIdx,5,numel(Adp.Time))*stateSelectionMatrix([1 2],5,numel(Adp.Time));
     QW = wyptWeight*diag(ones(size(PsiW,1),1));
+    % Input variation term
     Qu = inptWeight*diag(ones(numel(Adp.Time),1));
     GHatj = G'*PsiW'*QW*PsiW*G;
+    % Filters
     L0 = (Qu-GHatj)^(-1);
-    Lc =  L0*(1/2)*(f*Psiv*G)';
+    Lc =  L0*(1/2)*(fv*(Psiv+Psit)*G)';
     Le = -L0*G'*PsiW'*QW;
         
     % Apply learning filters to calculate deviation in input signal
     delUData = Lc+Le*(r-PsiW*psc.stateVec.Data(:));
     delU = timesignal(timeseries(delUData,Adp.Time));
-    
-    % Calculate some components of the performance index
-    Jv      = -f                   *Psiv*psc.stateVec.Data(:);
-    JvPrime = -ones(1,size(Psiv,1))*Psiv*psc.stateVec.Data(:);
-    
-    Ju      = delU.Data(:)'*Qu*delU.Data(:);
-    JuPrime = delU.Data(:)'   *delU.Data(:);
-    
-    Je      = (r-PsiW*psc.stateVec.Data(:))'*QW*(r-PsiW*psc.stateVec.Data(:));
-    JePrime = (r-PsiW*psc.stateVec.Data(:))'*   (r-PsiW*psc.stateVec.Data(:));
+
+    updatePlots
     
     % Resample deviation in control signal into standard domain
     UNext = UNext.resample(delU.Time);
     UNext = UNext + delU;
     UNext = UNext.rmnans;
-    
-    % Plot the flight path
-    plot(tsc.azimuth.Data*180/pi,tsc.elevation.Data*180/pi,...
-        'LineWidth',1,'Color','b','Parent',h.fltPathAx)
-    
-    % Plot the overall performance index
-    h.perfIndx.XData = [h.perfIndx.XData ii];
-    h.perfIndx.YData = [h.perfIndx.YData Jv+Ju+Je];
-    h.simTime.XData  = [h.simTime.XData  ii];
-    h.simTime.YData  = [h.simTime.YData  tsc.pathVar.Time(end)];
-    
-    % Plot the speed term
-    h.speedTermW.XData = [h.speedTermW.XData ii];
-    h.speedTermW.YData = [h.speedTermW.YData Jv];
-    h.speedTermU.XData = [h.speedTermU.XData ii];
-    h.speedTermU.YData = [h.speedTermU.YData JvPrime];
-    
-    % Plot the error (waypoint tracking) term
-    h.errTermW.XData = [h.errTermW.XData ii];
-    h.errTermW.YData = [h.errTermW.YData Je];
-    h.errTermU.XData = [h.errTermU.XData ii];
-    h.errTermU.YData = [h.errTermU.YData JePrime];
-    
-    % Plot the delta u term
-    h.delUTermW.XData = [h.delUTermW.XData ii];
-    h.delUTermW.YData = [h.delUTermW.YData Ju];
-    h.delUTermU.XData = [h.delUTermU.XData ii];
-    h.delUTermU.YData = [h.delUTermU.YData JuPrime];
-        
-    % Plot the control signals
-    h.uFBPrev.XData = tsc.pathVar.Data;
-    h.uFBPrev.YData = tsc.uFB.Data*180/pi;
-    
-    h.uFFPrev.XData = psc.pathVar.Data;
-    h.uFFPrev.YData = psc.uFF.Data*180/pi;
-    
-    h.uFFNext.XData = UNext.Time;
-    h.uFFNext.YData = UNext.Data*180/pi;
-    
-    % Plot the Fx Fit Error
-    h.FxErr.XData = [h.FxErr.XData ii];
-    h.FxErr.YData = [h.FxErr.YData FxErr];
-    
-    h.meanSpeed.XData = [h.meanSpeed.XData ii];
-    h.meanSpeed.YData = [h.meanSpeed.YData tsc.speed.mean];
-
-    drawnow
 end
+

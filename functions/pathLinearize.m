@@ -40,7 +40,7 @@ B = zeros(5,1,numel(tsc.pathVar.Time));
 
 % Find the files with the A and B matrices in them as calculated in
 % Mathematica
-basePath = fullfile(fileparts(which('unifoil.prj')),'Documentation');
+basePath = fullfile(fileparts(which('UnifoilFTICL.prj')),'Documentation');
 
 % Evaluate all the expressions for the elements of A
 for ii = 1:5

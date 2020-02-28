@@ -6,11 +6,12 @@ addOptional(p,'OE',0.8)
 parse(p,folder,AR,varargin{:}); 
 
 oswaldEfficiency = p.Results.OE;
-
+basePath = fileparts(which('UnifoilFTICL.prj'));
 folder = lower(folder);
-files = dir(fullfile(pwd,folder));
+files = dir(fullfile(basePath,folder));
+
 if ispc
-    [~,~,data]=xlsread(fullfile(pwd,folder,files(3).name));
+    [~,~,data] = xlsread(fullfile(basePath,folder,files(3).name));
     aeroTable.fileName = files(3).name;
     aeroTable.Re = data{4,2};
     jj=1;
@@ -22,8 +23,8 @@ else
     files = files(3:end);
     for ii = 1:length(files)
         if ~strcmpi(files(ii).name(1),'.')
-            data=csvread(fullfile(pwd,folder,files(ii).name),11,0);
-            fid = fopen(fullfile(pwd,folder,files(ii).name));
+            data=csvread(fullfile(basePath,folder,files(ii).name),11,0);
+            fid = fopen(fullfile(basePath,folder,files(ii).name));
             Re = textscan(fid, '%s','delimiter', '\n');
             fCLose(fid);
             Re=strsplit(Re{1}{4},',');

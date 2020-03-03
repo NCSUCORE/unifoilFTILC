@@ -22,6 +22,9 @@ while ~isempty(nonMonInd)
     nonMonInd = find(diff(tsc.pathVar.Data)<=0);
 end
 
+tsc.addprop('Time');
+tsc.Time = timesignal(timeseries(tsc.pathVar.Time,tsc.pathVar.Time));
+
 % Create path-parameterized psc
 psc  = signalcontainer(tsc);
 
@@ -32,6 +35,7 @@ for ii = 1:numel(sigNames)
 end
 for ii = 1:numel(sigNames)
     psc.(sigNames{ii}) = psc.(sigNames{ii}).resample(pathStep);
+%     psc.(sigNames{ii}) = psc.(sigNames{ii}).interpNaNs;
 end
 
 end

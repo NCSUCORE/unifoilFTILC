@@ -1,7 +1,6 @@
 function [Ad,Bd] = disc(Ac,Bc,step)
 Ad = Ac;
 Bd = Bc;
-
 CMat = eye(size(Ac.getdatasamples(1)));
 DMat = zeros(size(Bc.getdatasamples(1)));
 for ii = 1:numel(Ac.Time)
@@ -9,5 +8,4 @@ for ii = 1:numel(Ac.Time)
     Ad.Data(:,:,ii) = sysTmp.A;
     Bd.Data(:,:,ii) = sysTmp.B;
 end
-
 end

@@ -56,10 +56,13 @@ ylabel('Dist. Trav. [m]')
 
 % Predicted and actual speed over path
 h.speedDiffProfileAx = subplot(nRow,nCol,nRow*nCol-1);
-h.speedDiffProfile = plot(nan,nan,'Color','b');
+h.speedProfPred = plot(nan,nan,'Color','g','DisplayName','$i+1$ Pred');
 grid on;hold on
+h.speedProfAct  = plot(nan,nan,'Color','b','DisplayName','$i$ Act');
+h.speedLegend = legend;
+h.speedLegend.Location = 'best';
 xlabel('Path Var')
-ylabel('$v_{j+1}^{pred} - v_{j}^{act}$')
+ylabel('Speed')
 
 %% Plot components of the performance index
 

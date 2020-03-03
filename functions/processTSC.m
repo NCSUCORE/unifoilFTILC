@@ -10,7 +10,7 @@ end
 
 % Crop to first lap
 times   = tsc.lapNum.Time(tsc.lapNum.Data==1);
-tsc = tsc.crop([times(1),times(end)]);
+tsc = tsc.crop([times(1),times(end-1)]);
 
 % Remove samples corresponding to non monotonically increasing path steps
 nonMonInd = find(diff(tsc.pathVar.Data)<=0);
@@ -33,8 +33,5 @@ end
 for ii = 1:numel(sigNames)
     psc.(sigNames{ii}) = psc.(sigNames{ii}).resample(pathStep);
 end
-
-% Resampling can cause NaN's in data, drop all of those
-
 
 end

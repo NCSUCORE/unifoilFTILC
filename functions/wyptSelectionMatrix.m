@@ -1,21 +1,14 @@
-function Q = wyptSelectionMatrix(stateIdx,wyptIdx,nStates,nSteps)
-wyptIdx = wyptIdx(:)'; % Make this a row
-% Calculate the number of waypoints
-% nWyPts = numel(wyptIdx);
-% Create zeros sub-matrix
-q = zeros(nStates,nStates);
-% Create cell array for block matrix
-Q = cell(nSteps,nSteps);
+function Gamma = wyptSelectionMatrix(stateIdx,wyptIdx,nStates,nSteps)
+% Matrix to pick off specified state value at every time step
+Gamma = cell(nSteps,nSteps);
 % Set all block elements to zero sub matrics
-Q(:) = {q};
-% Set specified element of sub matrix to 1
-qDiag = zeros(nStates,1);
-qDiag(stateIdx) = 1;
-% q(stateIdx) = diag(qDiag);
+Gamma(:) = {zeros(nStates,nStates)};
 % Set block diagonal elements of block matrix to new sub matrix
-Q(sub2ind(size(Q),wyptIdx,wyptIdx)) = {diag(qDiag)};
+gamma = zeros(1,nStates);
+gamma(stateIdx) = 1;
+for ii = 1:numel(wyptIdx)
+    Gamma(wyptIdx(ii),wyptIdx(ii)) = {diag(gamma)};
+end
 % Convert cell block matrix to matrix
-Q = cell2mat(Q);
-% Eliminate empty rows
-Q = Q(sum(Q)~=0,:);
+Gamma = cell2mat(Gamma);
 end

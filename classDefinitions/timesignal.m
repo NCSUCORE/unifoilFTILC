@@ -419,7 +419,12 @@ classdef timesignal < timeseries
             derivSignal.Name = obj.Name + "Deriv";
         end
         
-        function intSig = cumtrapz(obj,initVal)
+        function intSig = cumtrapz(obj,varargin)
+            if isempty(varargin)
+                initVal = zeros(size(obj.getdatasamples(1)));
+            else
+                initVal = varargin{1};
+            end
             intSig = timesignal(obj);
             timeDimInd = find(size(obj.Data) == numel(obj.Time));
             intSig.Data = cumtrapz(intSig.Time,intSig.Data,timeDimInd)+initVal;

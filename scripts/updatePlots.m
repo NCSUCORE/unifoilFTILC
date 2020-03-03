@@ -19,9 +19,9 @@ JuPred = delU.Data(:)'*Qu*delU.Data(:);
 JePred = (r-PsiW*xNext(:))'*QW*(r-PsiW*xNext(:));
 
 % Calculate predicted and actual distances tavelled
-dPred = arcLength(xNext(1:5:end),xNext(2:5:end),basisParams(5));
+dPred = arcLength(xNext(1:5:end),xNext(2:5:end),radius);
 dPred = dPred(end);
-dLast = arcLength(tsc.azimuth.Data,tsc.elevation.Data,basisParams(5));
+dLast = arcLength(tsc.azimuth.Data,tsc.elevation.Data,radius);
 dLast = dLast(end);
 
 % Update flight paths
@@ -33,7 +33,6 @@ h.predicPath_iPls1Zm.YData = xNext(2:5:end)*180/pi;
 % Update the overall performance index
 h.perfIndxAct.XData = [h.perfIndxAct.XData ii];
 h.perfIndxAct.YData = [h.perfIndxAct.YData JvAct+JuAct+JeAct];
-
 h.perfIndxPred.XData = [h.perfIndxPred.XData ii+1];
 h.perfIndxPred.YData = [h.perfIndxPred.YData JvPred+JuPred+JePred];
 
@@ -75,14 +74,12 @@ h.meanSpeedAct.YData = [h.meanSpeedAct.YData tsc.speed.mean];
 h.meanSpeedPred.XData = [h.meanSpeedPred.XData ii+1];
 h.meanSpeedPred.YData = [h.meanSpeedPred.YData mean(xNext(3:5:end))];
 
-% Update the dsdt and dtds plots
-h.dsdt.XData = psc.pathVar.Data(1:end-1);
-h.dsdt.YData = psc.dsdt.Data(1:end-1);
-h.dtds.XData = psc.pathVar.Data(1:end-1);
-h.dtds.YData = 1./psc.dsdt.Data(1:end-1);
+% Update predicted and actual speed profiles
+h.speedDiffProfile.XData = psc.pathVar.Data;
+h.speedDiffProfile.YData = xNext(3:5:end) - psc.speed.Data;
 
+% Update simulation time plot
 h.simTime.XData  = [h.simTime.XData  ii];
 h.simTime.YData  = [h.simTime.YData  tsc.pathVar.Time(end)];
-
 
 drawnow

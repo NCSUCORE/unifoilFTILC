@@ -2,21 +2,21 @@
 
 % Actual performance index components
 % Speed term
-JvAct  = -fv*Psiv*psc.stateVec.Data(6:end)';
+JvAct  = -fv*psc.stateVec.Data(:);
 % Control deviation term
 JuAct  = delU.Data(:)'*Qu*delU.Data(:);
 % Waypoint tracking error term
-JeAct  = (r-PsiW*psc.stateVec.Data(6:end)')'*QW*(r-PsiW*psc.stateVec.Data(6:end)');
+JeAct  = (r-PsiW*psc.stateVec.Data(:))'*QW*(r-PsiW*psc.stateVec.Data(:));
 
 % Predicted performance over next iteration
 % State trajectory predicted for next iteration
-xNext  = psc.stateVec.Data(:) + [zeros(5,1) ; G *delU.Data];
+xNext  = psc.stateVec.Data(:) + G *delU.Data(:);
 % Speed term
-JvPred = -fv*Psiv*xNext(6:end);
+JvPred = -fv*xNext;
 % Control deviation term
 JuPred = delU.Data(:)'*Qu*delU.Data(:);
 % Waypoint tracking error term
-JePred = (r-PsiW*xNext(6:end))'*QW*(r-PsiW*xNext(6:end));
+JePred = (r-PsiW*xNext(:))'*QW*(r-PsiW*xNext(:));
 
 % Calculate predicted and actual distances tavelled
 dPred = arcLength(xNext(1:5:end),xNext(2:5:end),radius);
@@ -72,7 +72,7 @@ h.distAct.YData  = [h.distAct.YData dLast];
 h.meanSpeedAct.XData = [h.meanSpeedAct.XData ii];
 h.meanSpeedAct.YData = [h.meanSpeedAct.YData tsc.speed.mean];
 % h.meanSpeedPred.XData = [h.meanSpeedPred.XData ii+1];
-% h.meanSpeedPred.YData = [h.meanSpeedPred.YData mean(xNext(3:5:end)./ds)];
+% h.meanSpeedPred.YData = [h.meanSpeedPred.YData mean(xNext(3:5:end))];
 
 % Update predicted and actual speed profiles
 h.speedProfPred.XData = psc.pathVar.Data;

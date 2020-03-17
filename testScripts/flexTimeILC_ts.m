@@ -1,6 +1,4 @@
-% A basic test script demonstrating how to run the unifoil model.
-% All units are in radians except when otherwise stated (eg some basis
-% parameters)
+% Test script to fun flexible time ILC.
 
 %% Setup
 clear;close all
@@ -47,7 +45,7 @@ tauRef          = 0.25; % reference model time constant (s)
 refGain1        = 1/tauRef^2;
 refGain2        = 2/tauRef;
 % Pure Pursuit Controller
-maxLeadLength   = 0.01;
+maxLeadLength   = 0.05;
 maxIntAngle     = 10*pi/180;
 % Min and max alpha for the wing controller
 wingAlphaPlusStall  =  10*pi/180;
@@ -63,14 +61,15 @@ rudderAlphaMinusStall   = -6*pi/180;
 initSpeed       = 5.735;
 initAzimuth     = meanAzimuth;
 initElevation   = meanElevation;
-initTwist       = -20*pi/180;%-22.5*pi/180;
+initTwist       = -33*pi/180;%-22.5*pi/180;
 initTwistRate   = 0;
 initPathVar     = 0;
 
 %% Flexible Time ILC Parameters
-numIters = 20;
+numIters = 50;
 
-pathStep = 1/400;
+pathStep = 1/500;
+ns = numel(0:pathStep:1);
 % Linear force parmeterization
 FxParams = [3000 10];
 
@@ -84,15 +83,21 @@ wyPtAzimuth     = atan2(wyPtPosVecs(:,2),wyPtPosVecs(:,1));
 wyPtElevation   = pi/2-acos(wyPtPosVecs(:,3)./sqrt(sum(wyPtPosVecs.^2,2)));
 
 % Performance index components
-spedWeight = 3e-1;
-wyptWeight = 4.5e2;
-inptWeight = 5e-2;
+% Dot product version weights
+spedWeight = 1e-1;
+wyptWeight = 5e2;
+inptWeight = 5e-1;
+% Time step version weights
+% spedWeight = 1e-1;
+% wyptWeight = 5e2;
+% inptWeight = 5e0;
+
 
 %% Set up some plots
 setUpPlots
 
 %% Run the ILC algorithm
- UNext = timesignal(timeseries([0 0],[0 1]));
+UNext = timesignal(timeseries([0 0],[0 1]));
 for ii = 1:numIters
     % Run the simulation
     
@@ -125,27 +130,42 @@ for ii = 1:numIters
     
     % Discretize the continuous, linear, path-domain model
     [Adp,Bdp] = disc(Acp,Bcp,pathStep);
-    % Delete the last A and B (they would give the state vec beyond end of
-    % path)
     
-    Adp = delsample(Adp,'Index',numel(Adp.Time));
-    Bdp = delsample(Bdp,'Index',numel(Bdp.Time));
-        
     % Lift the discrete, linear, path-domain model
     [F,G] = lift(Adp,Bdp);
     
-    % Build the weighting matrix for the performance index
+    % Build the weighting matrices for the performance index
     % Linear term
-    Psiv        = spedWeight*stateSelectionMatrix(3,5,numel(Adp.Time));
-    wyptArrvTms = interp1(psc.pathVar.Data,psc.Time.Data,0:pathStep:1);
-    % pathVar = 0 and 1 are usually outside the range, so replace NaNs
-    wyptArrvTms(1)   = 0;
-    wyptArrvTms(end) = psc.Time.Data(end);
-    wyptArrvDts = diff(wyptArrvTms)./psc.Time.Data(end);
-    fv     = repmat(wyptArrvDts(:),[1 5])';
-    fv     = fv(:)';
+    % Dot product weighting
+    Psivpsi = stateSelectionMatrix([3 4],5,ns);
+    Psivpsi = Psivpsi(sum(Psivpsi,2)~=0,:); % Eliminate empty rows
+    Psivpsi = spedWeight*Psivpsi;
+    [~,S] = lemOfGerono(0:pathStep:1,basisParams);
+    SMat = cell(ns,ns);
+    SMat(:) = {zeros(1,2)};
+    for jj = 1:ns
+        SMat(jj,jj) = {S(jj,:)};
+    end
+    SMat = cell2mat(SMat);
+    dUnder = cell(ns,ns);
+    dUnder(:) = {zeros(2,2)};
+    v = psc.stateVec.Data(3:5:end)';
+    psi = psc.stateVec.Data(4:5:end)';
+    for jj = 1:ns
+        dUnder{jj,jj} = [...
+            cos(psi(jj)) -v(jj).*sin(psi(jj));...
+            sin(psi(jj)) -v(jj).*cos(psi(jj))];
+    end
+    dUnder = cell2mat(dUnder);
+    fv = ones(1,size(S,1))*SMat*dUnder*Psivpsi;
+    % Time step weighting
+    Psiv = stateSelectionMatrix(3,5,ns);
+    dt = diff(psc.Time.Data);
+    dt(end+1) = dt(end);
+    dt = repmat(dt,[1,5])';
+    dt = dt(:);
+    fv = spedWeight*dt'*Psiv;
     % Lifted, path-domain reference signal
-
     r = cell(numel(Adp.Time),1);
     r(:) = {zeros(5,1)};
     for jj = 1:numel(posWayPtPathIdx)
@@ -156,28 +176,30 @@ for ii = 1:numIters
     PsiW    = wyptSelectionMatrix([1 2],posWayPtPathIdx,5,numel(Adp.Time));
     QW      = wyptWeight*diag(ones(size(PsiW,1),1));
     % Input variation term
-    Qu      = inptWeight*diag(ones(numel(Adp.Time),1));
+    Qu      = inptWeight*diag(ones(ns-1,1));
     GHatj   = G'*PsiW'*QW*PsiW*G;
     % Filters
     L0 = (GHatj+Qu)^(-1);
-    Lc =  L0*(1/2)*G'*Psiv*fv';
+    Lc =  L0*(1/2)*G'*fv';
     Le =  L0*G'*PsiW*QW;
     
     % Apply learning filters to calculate deviation in input signal
-    delUData = Lc+Le*(r-PsiW*psc.stateVec.Data(6:end)');
-    delU = timesignal(timeseries(delUData,Adp.Time));
+    delUData = Lc+Le*(r-PsiW*psc.stateVec.Data(:));
+    delU = timesignal(timeseries(delUData,psc.pathVar.Data(1:end-1)));
     
     updatePlots
     
     % Resample deviation in control signal into standard domain
     if ii == 1
         UNext = timesignal(timeseries(...
-            zeros(numel(Adp.Time),1),...
-            Adp.Time));
+            zeros(ns-1,1),...
+            0:pathStep:1-pathStep));
     else
         UNext = UNext.resample(delU.Time);
     end
     UNext = UNext + delU;
-    UNext = UNext.rmnans;
+    %     UNext = UNext.rmnans;
+
 end
+savePlot(h.fig1,'output',sprintf('DotProdWeighting_%d',ii))
 

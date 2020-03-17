@@ -26,8 +26,8 @@ avgErr = sqrt(minErr)./numel(Fx);
 
 
 % sqrt(sum(FxErr(shifts(idx))))./numel(Fx)
-FxParams.g = shifts(idx);
-
+% FxParams.g = shifts(idx);
+% 
 % figure('Position',[ -0.9995    0.0380    0.4990    0.8833])
 % subplot(2,1,1)
 % scatter3(t,a,Fx,...

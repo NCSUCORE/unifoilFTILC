@@ -6,7 +6,7 @@ Gamma(:) = {zeros(nStates,nStates)};
 % Set block diagonal elements of block matrix to new sub matrix
 gamma = zeros(1,nStates);
 gamma(indx) = 1;
-Gamma(1:nRows:(nRows-1)^2) = {diag(gamma)};
+Gamma(1:nRows+1:(nRows)^2) = {diag(gamma)};
 % Convert cell block matrix to matrix
 Gamma = cell2mat(Gamma);
 end

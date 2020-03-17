@@ -1,4 +1,4 @@
-function gndPos = lemOfGerono(pathVar,geomParams)
+function [gndPos,varargout] = lemOfGerono(pathVar,geomParams)
 %LEMOFGERONO Mercator projection of the lemniscate of Gerono onto a sphere
 %   INPUTS
 %   pathVar = Normalized path variabl (0-1) describing position along the
@@ -39,6 +39,12 @@ gndPos = nan(numel(pathVar),3);
 gndPos(:,1) = R.*cos(a).*sin(z);
 gndPos(:,2) = R.*sin(a).*sin(z);
 gndPos(:,3) = R.*cos(z);
+
+if nargout>1
+     tanVec = [A0.*pi.*R.*cos(2.*pi.*pathVar(:)),(-2).*E0.*pi.*R.*cos(4.*pi.*pathVar(:))];
+    tanVec = tanVec./repmat(sqrt(sum(tanVec.^2,2)),[1 2]);
+    varargout{1} = tanVec;
+end
 
 end
 

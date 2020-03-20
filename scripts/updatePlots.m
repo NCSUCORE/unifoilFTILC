@@ -1,87 +1,121 @@
-% Calculate some components of the performance index
+% Actual state trajectory from previous iteration
+xActPrev = psc.stateVec.Data(nx+1:end)';
 
-% Actual performance index components
-% Speed term
-JvAct  = -fv*psc.stateVec.Data(:);
-% Control deviation term
-JuAct  = delU.Data(:)'*Qu*delU.Data(:);
-% Waypoint tracking error term
-JeAct  = (r-PsiW*psc.stateVec.Data(:))'*QW*(r-PsiW*psc.stateVec.Data(:));
+% Actual values of performance index over last iteration
+JlxAct  = Lx*xActPrev;
+JqxAct  = (r-xActPrev)'*Qe*(r-xActPrev);
+JluAct  = Lu*uFFPrev;
+JquAct  = (uFFNext-uFFPrev)'*Qu*(uFFNext-uFFPrev);
 
-% Predicted performance over next iteration
+
 % State trajectory predicted for next iteration
-xNext  = psc.stateVec.Data(:) + G *delU.Data(:);
-% Speed term
-JvPred = -fv*xNext;
-% Control deviation term
-JuPred = delU.Data(:)'*Qu*delU.Data(:);
-% Waypoint tracking error term
-JePred = (r-PsiW*xNext(:))'*QW*(r-PsiW*xNext(:));
+xNextPred   = psc.stateVec.Data(nx+1:end)' + G*(uFFNext(:)-uFFPrev(:));
 
-% Calculate predicted and actual distances tavelled
-dPred = arcLength(xNext(1:5:end),xNext(2:5:end),radius);
-dPred = dPred(end);
-dLast = arcLength(tsc.azimuth.Data,tsc.elevation.Data,radius);
-dLast = dLast(end);
-
-% Update flight paths
-h.predicPath_iPls1.XData = xNext(1:5:end)*180/pi;
-h.predicPath_iPls1.YData = xNext(2:5:end)*180/pi;
-h.predicPath_iPls1Zm.XData = xNext(1:5:end)*180/pi;
-h.predicPath_iPls1Zm.YData = xNext(2:5:end)*180/pi;
+JlxPred     = Lx*xNextPred;
+JqxPred     = (r-xNextPred)'*Qe*(r-xNextPred);
+JluPred     = Lu*uFFNext;
+JquPred     = (uFFNext-uFFPrev)'*Qu*(uFFNext-uFFPrev);
 
 % Update the overall performance index
-h.perfIndxAct.XData = [h.perfIndxAct.XData ii];
-h.perfIndxAct.YData = [h.perfIndxAct.YData JvAct+JuAct+JeAct];
+h.perfIndxAct.XData  = [h.perfIndxAct.XData ii];
+h.perfIndxAct.YData  = [h.perfIndxAct.YData JlxAct+JluAct+JqxAct+JquAct];
 h.perfIndxPred.XData = [h.perfIndxPred.XData ii+1];
-h.perfIndxPred.YData = [h.perfIndxPred.YData JvPred+JuPred+JePred];
+h.perfIndxPred.YData = [h.perfIndxPred.YData JlxPred+JluPred+JqxPred+JquPred];
 
-% Update the speed term
-h.speedTermAct.XData = [h.speedTermAct.XData ii];
-h.speedTermAct.YData = [h.speedTermAct.YData JvAct];
-h.speedTermPred.XData = [h.speedTermPred.XData ii+1];
-h.speedTermPred.YData = [h.speedTermPred.YData JvPred];
-
-% Update the error (waypoint tracking) term
-h.errTermAct.XData  = [h.errTermAct.XData ii];
-h.errTermAct.YData  = [h.errTermAct.YData JeAct];
-h.errTermPred.XData = [h.errTermPred.XData ii+1];
-h.errTermPred.YData = [h.errTermPred.YData JePred];
-
-% Update the delta u term
-h.delUTermAct.XData  = [h.delUTermAct.XData ii];
-h.delUTermAct.YData  = [h.delUTermAct.YData JuAct];
-h.delUTermPred.XData = [h.delUTermPred.XData ii+1];
-h.delUTermPred.YData = [h.delUTermPred.YData JuPred];
-
-% Update the control signals
-h.uFBPrev.XData = tsc.pathVar.Data;
-h.uFBPrev.YData = tsc.uFB.Data*180/pi;
-h.uFFPrev.XData = psc.pathVar.Data;
-h.uFFPrev.YData = psc.uFF.Data*180/pi;
-h.uFFNext.XData = UNext.Time;
-h.uFFNext.YData = UNext.Data*180/pi;
-
-% Update the Predicted and Actual distances
-h.distPred.XData = [h.distPred.XData ii+1];
-h.distPred.YData = [h.distPred.YData dPred];
-h.distAct.XData  = [h.distAct.XData ii];
-h.distAct.YData  = [h.distAct.YData dLast];
-
-% Update the mean speed over the last iteration
-h.meanSpeedAct.XData = [h.meanSpeedAct.XData ii];
-h.meanSpeedAct.YData = [h.meanSpeedAct.YData tsc.speed.mean];
-% h.meanSpeedPred.XData = [h.meanSpeedPred.XData ii+1];
-% h.meanSpeedPred.YData = [h.meanSpeedPred.YData mean(xNext(3:5:end))];
-
-% Update predicted and actual speed profiles
-h.speedProfPred.XData = psc.pathVar.Data;
-h.speedProfPred.YData = xNext(3:5:end);
-h.speedProfAct.XData = psc.speed.Time;
-h.speedProfAct.YData = psc.speed.Data;
-
-% Update simulation time plot
+% Update total simulation time plot
 h.simTime.XData  = [h.simTime.XData  ii];
 h.simTime.YData  = [h.simTime.YData  tsc.pathVar.Time(end)];
 
+% Update the linear state term
+h.lxAct.XData   = [h.lxAct.XData    ii];
+h.lxAct.YData   = [h.lxAct.YData    JlxAct];
+h.lxPred.XData  = [h.lxPred.XData   ii+1];
+h.lxPred.YData  = [h.lxPred.YData   JlxPred];
+
+% Update the quadratic state term
+h.qxAct.XData  = [h.qxAct.XData ii];
+h.qxAct.YData  = [h.qxAct.YData JqxAct];
+h.qxPred.XData = [h.qxPred.XData ii+1];
+h.qxPred.YData = [h.qxPred.YData JqxPred];
+
+% Update the linear input term
+h.luAct.XData  = [h.luAct.XData ii];
+h.luAct.YData  = [h.luAct.YData JluAct];
+h.luPred.XData = [h.luPred.XData ii+1];
+h.luPred.YData = [h.luPred.YData JluPred];
+
+% Update the quadratic input term
+h.quAct.XData  = [h.quAct.XData ii];
+h.quAct.YData  = [h.quAct.YData JquAct];
+h.quPred.XData = [h.quPred.XData ii+1];
+h.quPred.YData = [h.quPred.YData JquPred];
+
+% Flight paths
+h.actualPath_iMin1.XData = h.actualPath_i.XData;
+h.actualPath_iMin1.YData = h.actualPath_i.YData;
+h.actualPath_i.XData = psc.azimuth.Data(:)'*180/pi;
+h.actualPath_i.YData = psc.elevation.Data(:)'*180/pi;
+h.predicPath_iPls1.XData = xNextPred(1:nx:end)*180/pi;
+h.predicPath_iPls1.YData = xNextPred(2:nx:end)*180/pi;
+
+% Wing control input
+h.uw.XData = psc.uw.Time;
+h.uw.YData = psc.uw.Data*180/pi;
+h.uwfb.XData = psc.uwfb.Time;
+h.uwfb.YData = psc.uwfb.Data*180/pi;
+h.uwffPrev.XData = psc.uwff.Time;
+h.uwffPrev.YData = psc.uwff.Data*180/pi;
+h.uwffNext.XData = Ss(1:end-1);
+h.uwffNext.YData = uFFNext(1:nu:end)*180/pi;
+
+% Rudder control input
+h.ur.XData = psc.ur.Time;
+h.ur.YData = psc.ur.Data*180/pi;
+h.urfb.XData = psc.urfb.Time;
+h.urfb.YData = psc.urfb.Data*180/pi;
+h.urffPrev.XData = psc.urff.Time;
+h.urffPrev.YData = psc.urff.Data*180/pi;
+h.urffNext.XData = urFFNext.Time;
+h.urffNext.YData = urFFNext.Data*180/pi;
+
+h.title.String = sprintf('Iteration %d',ii);
+
 drawnow
+
+% Update figure 2
+h.phiPrev.XData = psc.pathVar.Data;
+h.phiPrev.YData = psc.azimuth.Data*180/pi;
+h.phiPred.XData = Ss(2:end);
+h.phiPred.YData = xNextPred(1:nx:end)*180/pi;
+h.dphiPred.XData = Ss(2:end);
+h.dphiPred.YData = (xNextPred(1:nx:end)-xActPrev(1:nx:end))*180/pi;
+
+h.thetaPrev.XData = psc.pathVar.Data;
+h.thetaPrev.YData = psc.elevation.Data*180/pi;
+h.thetaPred.XData = Ss(2:end);
+h.thetaPred.YData = xNextPred(2:nx:end)*180/pi;
+h.dthetaPred.XData = Ss(2:end);
+h.dthetaPred.YData = (xNextPred(2:nx:end)-xActPrev(2:nx:end))*180/pi;
+
+h.vPrev.XData = psc.pathVar.Data;
+h.vPrev.YData = psc.speed.Data;
+h.vPred.XData = Ss(2:end);
+h.vPred.YData = xNextPred(3:nx:end);
+h.dvPred.XData = Ss(2:end);
+h.dvPred.YData = (xNextPred(3:nx:end)-xActPrev(3:nx:end));
+
+h.psiPrev.XData = psc.pathVar.Data;
+h.psiPrev.YData = psc.twistAngle.Data*180/pi;
+h.psiPred.XData = Ss(2:end);
+h.psiPred.YData = xNextPred(4:nx:end)*180/pi;
+h.dpsiPred.XData = Ss(2:end);
+h.dpsiPred.YData = (xNextPred(4:nx:end)-xActPrev(4:nx:end))*180/pi;
+
+h.omegaPrev.XData = psc.pathVar.Data;
+h.omegaPrev.YData = psc.twistRate.Data*180/pi;
+h.omegaPred.XData = Ss(2:end);
+h.omegaPred.YData = xNextPred(5:nx:end)*180/pi;
+h.domegaPred.XData = Ss(2:end);
+h.domegaPred.YData = (xNextPred(5:nx:end)-xActPrev(5:nx:end))*180/pi;
+
+% drawnow

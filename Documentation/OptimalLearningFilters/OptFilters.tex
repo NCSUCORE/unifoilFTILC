@@ -1,0 +1,37 @@
+\documentclass[a4paper,landscape]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{soul}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage[margin=0.5in]{geometry}
+\begin{document}
+\begin{align}
+J_{j+1} &= L_x x_{j+1} + L_u u_{j+1} + e_{j+1}^TQ_e e_{j+1} + \delta u_{j}^TQ_u \delta u_{j}\\
+&= L_x \left(x_j + G_j u_{j+1} -G_j u_j\right) + L_u u_{j+1} +\left(r-x_{j+1} \right)^TQ_e \left(r-x_{j+1} \right) + \left(u_{j+1}-u_j\right)^T Q_u \left(u_{j+1}-u_j\right)\\
+&= L_x \left(x_j + G_j u_{j+1} -G_j u_j\right) + L_u u_{j+1} +\left(r-\left(x_j + G_j u_{j+1} -G_j u_j\right) \right)^TQ_e \left(r-\left(x_j + G_j u_{j+1} -G_j u_j\right) \right) + \left(u_{j+1}-u_j\right)^T Q_u \left(u_{j+1}-u_j\right)\\
+&= L_x \left(x_j + G_j u_{j+1} -G_j u_j\right) + L_u u_{j+1} +\left(r- x_j - G_j u_{j+1} +G_j u_j \right)^TQ_e \left(r-x_j - G_j u_{j+1} +G_j u_j \right) + \left(u_{j+1}-u_j\right)^T Q_u \left(u_{j+1}-u_j\right)\\
+\end{align}
+\begin{align}
+\frac{dj_{j+1}}{du_{j+1}}& = L_x G_j + L_u -2\left(r- x_j - G_j u_{j+1} +G_j u_j \right)^T Q_e G_j +2\left(u_{j+1}-u_j\right)^T Q_u\\
+& = L_x G_j + L_u - 2 r^T Q_e G_j   + 2 x_j^T Q_e G_j + 2 (G_j u_{j+1})^T Q_e G_j - 2 (G_j u_j)^T Q_e G_j + 2 u_{j+1}^T Q_u       - 2 u_j^T Q_u\\
+& = L_x G_j + L_u - 2 r^T Q_e G_j   + 2 x_j^T Q_e G_j + 2 u_{j+1}^T G_j^T Q_e G_j - 2 u_j^T G_j^T Q_e G_j + 2 u_{j+1}^T Q_u       - 2 u_j^T Q_u\\
+& = L_x G_j + L_u - 2 r^T Q_e G_j   + 2 x_j^T Q_e G_j + 2 u_{j+1}^T G_j^T Q_e G_j + 2 u_{j+1}^T Q_u       - 2 u_j^T G_j^T Q_e G_j - 2 u_j^T Q_u\\
+& = L_x G_j + L_u - 2 e_j^T Q_e G_j                   + 2 u_{j+1}^T G_j^T Q_e G_j + 2 u_{j+1}^T Q_u       - 2 u_j^T G_j^T Q_e G_j - 2 u_j^T Q_u\\
+& = L_x G_j + L_u - 2 e_j^T Q_e G_j                   + 2 u_{j+1}^T \left(G_j^T Q_e G_j + Q_u\right)      - 2 u_j^T \left( G_j^T Q_e G_j + Q_u\right)\\
+\end{align}
+\begin{align}
+\vec{0}   & = L_x G_j + L_u - 2 e_j^T Q_e G_j + 2 u_{j+1}^T \left(G_j^T Q_e G_j + Q_u\right) - 2 u_j^T \left( G_j^T Q_e G_j + Q_u\right)\\
+u_{j+1}^T \left(G_j^T Q_e G_j + Q_u\right) & =  e_j^T Q_e G_j + u_j^T \left( G_j^T Q_e G_j + Q_u\right) -\frac{1}{2}\left(L_x G_j + L_u\right)\\
+\left(G_j^T Q_e G_j + Q_u\right) u_{j+1}  & =  G_j^T Q_e e_j +  \left( G_j^T Q_e G_j + Q_u\right) u_j -\frac{1}{2}\left(G_j^T L_x^T  + L_u^T\right)\\
+u_{j+1}  & =  F_o G_j^T Q_e e_j +  u_j -\frac{1}{2}F_o\left(G_j^T L_x^T  + L_u^T\right)\\
+u_{j+1}  & =  u_j + F_e e_j + F_c\\
+F_o & \triangleq \left(G_j^T Q_e G_j + Q_u\right)^{-1}\\
+F_c & \triangleq -\frac{1}{2}F_o\left(G_j^T L_x^T  + L_u^T\right) \\
+F_e & \triangleq F_o G_j^T Q_e
+\end{align}
+\end{document}

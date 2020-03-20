@@ -18,30 +18,24 @@ E0 = geomParams(2);
 A1 = geomParams(3);
 E1 = geomParams(4);
 R  = geomParams(5);
-freqMult = geomParams(6);
+% freqMult = geomParams(6);
 
 pathVar = pathVar(:);
 
 % Calculate azimuth, elevation, and zenith
-a =  (A0/2)*sin(          2*pi*pathVar) + A1;
-if freqMult == 1 % Ellipse
-    e = -(E0/2)*cos(2*pi*pathVar) + E1;
-else % Fig 8
-    e = -(E0/2)*sin(4*pi*pathVar) + E1;
-end
+a =  (A0/2)*sin(2*pi*pathVar) + A1;
+e = -(E0/2)*sin(4*pi*pathVar) + E1;
 z =  (pi/2) - e;
 
-% plot(a,e)
 % Convert sphereical to cartesian
 % http://mathworld.wolfram.com/SphericalCoordinates.html
 gndPos = nan(numel(pathVar),3);
-
 gndPos(:,1) = R.*cos(a).*sin(z);
 gndPos(:,2) = R.*sin(a).*sin(z);
 gndPos(:,3) = R.*cos(z);
 
 if nargout>1
-     tanVec = [A0.*pi.*R.*cos(2.*pi.*pathVar(:)),(-2).*E0.*pi.*R.*cos(4.*pi.*pathVar(:))];
+    tanVec = [A0.*pi.*R.*cos(2.*pi.*pathVar(:)),(-2).*E0.*pi.*R.*cos(4.*pi.*pathVar(:))];
     tanVec = tanVec./repmat(sqrt(sum(tanVec.^2,2)),[1 2]);
     varargout{1} = tanVec;
 end

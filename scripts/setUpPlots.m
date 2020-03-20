@@ -1,6 +1,6 @@
-%% Figure 1
 nRow = 3;
 nCol = 4;
+
 path   = lemOfGerono(linspace(0,1),basisParams);
 pathAz = atan2d(path(:,2),path(:,1));
 pathEl = 90 - acosd(path(:,3)./sqrt(sum(path.^2,2)));
@@ -11,128 +11,170 @@ else
     h.fig1 = figure('Name','Summary','Position',[-1.0000    0.0370    1.0000    0.8917]);
 end
 
-% Path Shape
-h.pathShapeAx  = subplot(nRow,nCol,[1 2]);
-h.targetPath   = plot(pathAz,pathEl,...
+%% Path Shape
+h.fltPathsAx  = subplot(nRow,nCol,[1 2],'NextPlot','add','XGrid','on','YGrid','on');
+h.targetPath  = plot(pathAz,pathEl,...
     'LineWidth',2,'Color','r','LineStyle',':','DisplayName','Target Path');
-grid on;hold on
-h.actualPath_iMin1  = plot(nan,nan,'Color','k','DisplayName','$i-1$',...
-    'LineStyle','-');
+h.actualPath_iMin1  = plot(nan,nan,'Color','k','DisplayName',...
+    '$i-1$ Actual','LineStyle','-');
 h.actualPath_i      = plot(nan,nan,'Color',[0 0.75 0],'DisplayName',...
     '$i$, Actual','LineStyle','-');
 h.predicPath_iPls1  = plot(nan,nan,'Color','b','DisplayName',...
     '$i+1$, Predicted','LineStyle','-');
-h.fltPathAx = gca;
 xlabel('Azimuth, [deg]')
 ylabel('Elevation, [deg]')
 h.legend1 = legend;
 h.title = title('');
 
-% Control input
-h.uAx      = subplot(nRow,nCol,nCol+1);
+%% Control inputs
+% Wing control input
+h.wingCtrlAx = subplot(nRow,nCol,nCol+1,'NextPlot','add','XGrid','on','YGrid','on');
+h.uw        = plot(nan,nan,'Color','k','DisplayName','$u_{w}^{prev}$','LineStyle','-');
+h.uwfb      = plot(nan,nan,'Color','b','DisplayName','$u_{w,fb}^{prev}$','LineStyle','-');
+h.uwffPrev  = plot(nan,nan,'Color','r','DisplayName','$u_{w,ff}^{prev}$','LineStyle','-');
+h.uwffNext  = plot(nan,nan,'Color','g','DisplayName','$u_{w,ff}^{next}$','LineStyle','-');
+xlim([0 1])
+xlabel('Path Var')
+ylabel('[deg]')
+h.uwLegend = legend;
+
+% Rudder control input
+h.ruddCtrlAx = subplot(nRow,nCol,2*nCol+1,'NextPlot','add','XGrid','on','YGrid','on');
 yyaxis left
-h.uFBPrev = plot(nan,nan,'Color','k','DisplayName','$u_{FB}^{j}$');
-grid on;hold on
-h.uFFPrev = plot(nan,nan,'Color','b','DisplayName','$u_{FF}^{j}$');
-h.uFFNext = plot(nan,nan,'Color','r','DisplayName','$u_{FF}^{j+1}$');
-xlim([0 1]);
+h.ur        = plot(nan,nan,'Color','k','DisplayName','$u_{r}^{prev}$','LineStyle','-');
+h.urfb      = plot(nan,nan,'Color','b','DisplayName','$u_{r,fb}^{prev}$','LineStyle','-');
+yyaxis right
+h.urffPrev  = plot(nan,nan,'Color','r','DisplayName','$u_{r,ff}^{prev}$','LineStyle','-');
+h.urffNext  = plot(nan,nan,'Color','g','DisplayName','$u_{r,ff}^{next}$','LineStyle','-');
+xlim([0 1])
 xlabel('Path Var')
-ylabel('$\delta u$')
-h.uAx.XAxis.TickValues =0:0.125:1;
-set(gca, 'TickLabelInterpreter','latex')
-h.ctrlLegend = legend;
-h.uAx.XAxis.TickLabels = {'0','$\frac{1}{8}$','$\frac{1}{4}$',...
-    '$\frac{3}{8}$','$\frac{1}{2}$','$\frac{5}{8}$','$\frac{3}{4}$',...
-    '$\frac{7}{8}$','$1$'};
+ylabel('[deg]')
+h.urLegend = legend;
 
-% Distance travelled
-h.distAx  = subplot(nRow,nCol,(nRow-1)*nCol+1);
-h.distAct = scatter(nan,nan);
-grid on;hold on
-h.distPred = scatter(nan,nan,'Marker','x');
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel('Dist. Trav. [m]')
 
-% Predicted and actual speed over path
-h.speedDiffProfileAx = subplot(nRow,nCol,nRow*nCol-1);
-h.speedProfPred = plot(nan,nan,'Color','g','DisplayName','$i+1$ Pred');
-grid on;hold on
-h.speedProfAct  = plot(nan,nan,'Color','b','DisplayName','$i$ Act');
-h.speedLegend = legend;
-h.speedLegend.Location = 'best';
-xlabel('Path Var')
-ylabel('Speed')
-
-%% Plot components of the performance index
-
+%% Plot performance things
 % Overall performance index
-h.perfIndxAx = subplot(nRow,nCol,3);
-h.perfIndxAct = scatter(nan,nan);
-grid on;hold on;
-h.perfIndxPred = scatter(nan,nan,'Marker','x');
+h.perfIndxAx    = subplot(nRow,nCol,nCol-1,'NextPlot','add','XGrid','on','YGrid','on');
+h.perfIndxAct   = scatter(nan,nan);
+h.perfIndxPred  = scatter(nan,nan,'Marker','x');
 xlim([1 numIters]);
 xlabel('Iteration Num, j')
 ylabel('Perf. Indx.')
 grid on;hold on
 
-% Speed term in performance index
-h.speedAx   = subplot(nRow,nCol,nCol);
-h.speedTermAct = scatter(nan,nan);
-grid on;hold on
-h.speedTermPred = scatter(nan,nan,'Marker','x');
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel('Speed Term')
-
-% Error term
-h.errAx   = subplot(nRow,nCol,nCol+4);
-h.errTermAct = scatter(nan,nan);
-grid on;hold on
-h.errTermPred = scatter(nan,nan,'Marker','x');
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel('Error Term')
-
-% Control input term
-h.delUAx   = subplot(nRow,nCol,nCol+3);
-h.delUTermAct = scatter(nan,nan);
-grid on;hold on
-h.delUTermPred = scatter(nan,nan,'Marker','x');
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel('$\delta u$ Term')
-
-% Mean speed
-h.meanSpeedAx   = subplot(nRow,nCol,nRow*nCol-2);
-h.meanSpeedAct = scatter(nan,nan);
-grid on;hold on
-h.meanSpeedPred = scatter(nan,nan,'Marker','x');
-xlim([1 numIters]);
-xlabel('Iteration Num, j')
-ylabel('Avg Speed, [m/s]')
-
 % Total Simulation Time
-h.iterTimeAx   = subplot(nRow,nCol,nRow*nCol);
-h.simTime   = scatter(nan,nan);
-grid on;hold on
+h.iterTimeAx    = subplot(nRow,nCol,nCol,'NextPlot','add','XGrid','on','YGrid','on');
+h.simTime       = scatter(nan,nan);
 xlim([1 numIters]);
 xlabel('Iteration Num, j')
 ylabel('$T_F$ [s]')
 
-% Path shape inset
-h.zoomAx = axes(gcf,'Units','Normalize','Position',[0.4104    0.5944    0.0990    0.1564]);
-box on
-h.targetPathZoom = plot(pathAz,pathEl,...
-    'LineWidth',2,'Color','r','LineStyle',':','DisplayName','Target Path');
-grid on;hold on
-h.actualPath_iMin1Zm  = plot(nan,nan,'Color','k','DisplayName',...
-    '$i-1$, Actual','LineStyle','-');
-h.actualPath_iZm      = plot(nan,nan,'Color',[0 0.75 0],'DisplayName',...
-    '$i$, Actual','LineStyle','-');
-h.predicPath_iPls1Zm  = plot(nan,nan,'Color','b','DisplayName',...
-    '$i+1$, Predicted','LineStyle','-');
-xlim([pathAz(1)-2 pathAz(1)+2])
-ylim([pathEl(1)-2 pathEl(1)+2])
+% Linear state term
+h.lxAx      = subplot(nRow,nCol,2*nCol-1,'NextPlot','add','XGrid','on','YGrid','on');
+h.lxAct     = scatter(nan,nan);
+h.lxPred    = scatter(nan,nan,'Marker','x');
+xlim([1 numIters]);
+xlabel('Iteration Num, j')
+ylabel('Lin. State Term')
 
-set(findall(h.fig1,'Type','Axes'),'FontSize',12)
+% Quadratic state term
+h.qxAx      = subplot(nRow,nCol,nRow*nCol-1,'NextPlot','add','XGrid','on','YGrid','on');
+h.qxAct     = scatter(nan,nan);
+h.qxPred    = scatter(nan,nan,'Marker','x');
+xlim([1 numIters]);
+xlabel('Iteration Num, j')
+ylabel('Quad. State Term')
+
+% Linear state term
+h.luAx      = subplot(nRow,nCol,2*nCol,'NextPlot','add','XGrid','on','YGrid','on');
+h.luAct     = scatter(nan,nan);
+h.luPred    = scatter(nan,nan,'Marker','x');
+xlim([1 numIters]);
+xlabel('Iteration Num, j')
+ylabel('Lin. Input Term')
+
+% Quadratic state term
+h.quAx      = subplot(nRow,nCol,nRow*nCol,'NextPlot','add','XGrid','on','YGrid','on');
+h.quAct     = scatter(nan,nan);
+h.quPred    = scatter(nan,nan,'Marker','x');
+xlim([1 numIters]);
+xlabel('Iteration Num, j')
+ylabel('Quad. Input Term')
+
+%% Path shape inset
+% h.zoomAx = axes(gcf,'Units','Normalize','Position',[0.4104    0.5944    0.0990    0.1564]);
+% box on
+% h.targetPathZoom = plot(pathAz,pathEl,...
+%     'LineWidth',2,'Color','r','LineStyle',':','DisplayName','Target Path');
+% grid on;hold on
+% h.actualPath_iMin1Zm  = plot(nan,nan,'Color','k','DisplayName',...
+%     '$i-1$, Actual','LineStyle','-');
+% h.actualPath_iZm      = plot(nan,nan,'Color',[0 0.75 0],'DisplayName',...
+%     '$i$, Actual','LineStyle','-');
+% h.predicPath_iPls1Zm  = plot(nan,nan,'Color','b','DisplayName',...
+%     '$i+1$, Predicted','LineStyle','-');
+% xlim([pathAz(1)-2 pathAz(1)+2])
+% ylim([pathEl(1)-2 pathEl(1)+2])
+
+%% Set all font sizes
+set(findall(gcf,'Type','Axes'),'FontSize',16)
+
+%% Created predicted and actual state sequences
+h.fig2 = figure('Position',[ 0.0005    0.0380    0.4990    0.8833],'Name','State Sequences');
+h.phiAx = subplot(5,1,1,'NextPlot','add','XGrid','on','YGrid','on');
+yyaxis left
+h.phiPrev = plot(nan,nan,'Color','b','LineStyle','-','DisplayName','$\phi(s)_{i+1}^{pred}$');
+h.phiPred = plot(nan,nan,'Color','r','LineStyle','-','DisplayName','$\phi(s)_i^{prev}$');
+yyaxis right
+h.dphiPred = plot(nan,nan,'Color','k','LineStyle','-','DisplayName','$\delta\phi(s)_i^{pred}$');
+legend
+xlabel('s')
+ylabel('$\phi$')
+
+h.thetaAx = subplot(5,1,2,'NextPlot','add','XGrid','on','YGrid','on');
+yyaxis left
+h.thetaPrev = plot(nan,nan,'Color','b','LineStyle','-','DisplayName','$\theta(s)_{i+1}^{pred}$');
+ylabel('$\theta$')
+h.thetaPred = plot(nan,nan,'Color','r','LineStyle','-','DisplayName','$\theta(s)_i^{prev}$');
+yyaxis right
+h.dthetaPred = plot(nan,nan,'Color','k','LineStyle','-','DisplayName','$\delta\theta(s)_i^{pred}$');
+legend
+xlabel('s')
+ylabel('$\delta\theta$')
+
+h.vAx = subplot(5,1,3,'NextPlot','add','XGrid','on','YGrid','on');
+yyaxis left
+h.vPrev = plot(nan,nan,'Color','b','LineStyle','-','DisplayName','$v(s)_{i+1}^{pred}$');
+h.vPred = plot(nan,nan,'Color','r','LineStyle','-','DisplayName','$v(s)_i^{prev}$');
+ylabel('$v$')
+yyaxis right
+h.dvPred = plot(nan,nan,'Color','k','LineStyle','-','DisplayName','$\delta v(s)_i^{pred}$');
+legend
+xlabel('s')
+ylabel('$\delta v$')
+
+h.psiAx = subplot(5,1,4,'NextPlot','add','XGrid','on','YGrid','on');
+yyaxis left
+h.psiPrev = plot(nan,nan,'Color','b','LineStyle','-','DisplayName','$\psi(s)_{i+1}^{pred}$');
+h.psiPred = plot(nan,nan,'Color','r','LineStyle','-','DisplayName','$\psi(s)_i^{prev}$');
+ylabel('$\psi$')
+yyaxis right
+h.dpsiPred = plot(nan,nan,'Color','k','LineStyle','-','DisplayName','$\delta\psi(s)_i^{pred}$');
+legend
+xlabel('s')
+ylabel('$\delta \psi$')
+
+h.omegaAx = subplot(5,1,5,'NextPlot','add','XGrid','on','YGrid','on');
+yyaxis left
+h.omegaPrev = plot(nan,nan,'Color','b','LineStyle','-','DisplayName','$\omega(s)_{i+1}^{pred}$');
+h.omegaPred = plot(nan,nan,'Color','r','LineStyle','-','DisplayName','$\omega(s)_i^{prev}$');
+ylabel('$\omega$')
+yyaxis right
+h.domegaPred = plot(nan,nan,'Color','k','LineStyle','-','DisplayName','$\delta\omega(s)_i^{pred}$');
+legend
+xlabel('s')
+ylabel('$\delta \omega$')
+
+set(findall(gcf,'Type','Axes'),'FontSize',16)
+
+

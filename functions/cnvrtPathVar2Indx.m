@@ -5,6 +5,5 @@ function idx = cnvrtPathVar2Indx(vars,pathSteps)
 % Round to nearest
 vars = interp1(pathSteps,pathSteps,vars,'nearest','extrap');
 [~,idx] = ismember(vars,pathSteps);
-idx = idx(idx~=0);
-idx = sort(idx,'ascend')-1;
+idx = sort(idx,'ascend');
 end

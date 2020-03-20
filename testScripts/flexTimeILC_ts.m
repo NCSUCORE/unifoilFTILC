@@ -25,8 +25,6 @@ radius          = 100;
 wingTable       = buildAirfoilTable('wing',wingOE,wingAR);
 rudderTable     = buildAirfoilTable('rudder',wingOE,wingAR);
 
-
-
 %% Water properties
 flowSpeed   = 1;
 density     = 1000;
@@ -37,8 +35,7 @@ azimuthSweep    = 60*pi/180; % Path azimuth sweep angle, degrees
 elevationSweep  = 20*pi/180; % Path elevation sweep angle, degrees
 meanAzimuth     = 0*pi/180;
 meanElevation   = 30*pi/180;
-pathShape       = 2; % 1 for ellipse, 2 for fig 8
-basisParams = [azimuthSweep, elevationSweep, meanAzimuth, meanElevation, radius, pathShape];
+basisParams     = [azimuthSweep, elevationSweep, meanAzimuth, meanElevation, radius];
 % Reference model
 tauRef          = 0.25; % reference model time constant (s)
 % Model Ref Ctrl Gains
@@ -54,8 +51,11 @@ wingAlphaMinusStall = -10*pi/180;
 rudderAlphaPlusStall    =  6*pi/180;
 rudderAlphaMinusStall   = -6*pi/180;
 % Coefficients of linear and quadratic fits to CL and CD curves
-[wingCLCoeffs,wingCDCoeffs]     = fitTable(wingTable,5*[-1 1]*pi/180);
-[rudderCLCoeffs,rudderCDCoeffs] = fitTable(rudderTable,6*[-1 1]*pi/180);
+wingC     = fitTable(wingTable,5*[-1 1]*pi/180);
+rudderC   = fitTable(rudderTable,6*[-1 1]*pi/180);
+% Wing AoA Controller Parameters
+wingTargetSpeed = 3.5;
+wingCtrlKp = 0.349;
 
 %% Initial Conditions
 initSpeed       = 5.735;
@@ -66,140 +66,108 @@ initTwistRate   = 0;
 initPathVar     = 0;
 
 %% Flexible Time ILC Parameters
-numIters = 50;
+numIters = 20;
 
-pathStep = 1/500;
-ns = numel(0:pathStep:1);
-% Linear force parmeterization
-FxParams = [3000 10];
-
+% Number of states and control inputs
+nx = 5;
+nu = 2;
+% Path discretization parameters
+ns = 250;
+Ss = linspace(0,1,ns); % Set of all discretized path variables
 % Waypoint Specification
-posWayPtPathVars = [0.25 0.5 0.75 1];
-posWayPtPathIdx = cnvrtPathVar2Indx(posWayPtPathVars,0:pathStep:1);
+Sw = [0.25 0.5 0.75 1]; % Set of path variables at the waypoints
+nw = numel(Sw); % Number of waypoints
+Iw = cnvrtPathVar2Indx(Sw,Ss);
 
-% Calculate derived quantities
-wyPtPosVecs     = lemOfGerono(posWayPtPathVars,basisParams);
+% Performance index components
+% Weights on linear state terms
+q1phi   = 0;
+q1theta = 0;
+q1v     = -5e-3;
+q1psi   = 0;
+q1omega = 0;
+q1x = [q1phi q1theta q1v q1psi q1omega];
+% Weights on quadratic state terms
+q2phi   = 400;
+q2theta = 400;
+q2v     = 0;
+q2psi   = 0;
+q2omega = 0;
+q2x = [q2phi q2theta q2v q2psi q2omega];
+
+% Weights on linear input terms
+q1uw = 0;
+q1ur = 0;
+q1u = [q1uw q1ur];
+% Weights on quadratic input terms
+q2uw = 0.5;
+q2ur = 0.5;
+q2u = [q2uw q2ur];
+
+% Derived quantities
+wyPtPosVecs     = lemOfGerono(Ss,basisParams);
 wyPtAzimuth     = atan2(wyPtPosVecs(:,2),wyPtPosVecs(:,1));
 wyPtElevation   = pi/2-acos(wyPtPosVecs(:,3)./sqrt(sum(wyPtPosVecs.^2,2)));
 
-% Performance index components
-% Dot product version weights
-spedWeight = 1e-1;
-wyptWeight = 5e2;
-inptWeight = 5e-1;
-% Time step version weights
-% spedWeight = 1e-1;
-% wyptWeight = 5e2;
-% inptWeight = 5e0;
-
+% Build the weighting matrices for the performance index
+Lx = repmat(q1x,[1 ns-1]);
+Lu = repmat(q1u,[1 ns-1]);
+Wx = weightMatrix(q2x,ns-1);
+Px = wyptSelectionMatrix(Iw-1,nx,ns-1);
+Qe = Px*Wx;
+Qu = weightMatrix(q2u,ns-1);
+r  = [wyPtAzimuth(:) wyPtElevation(:) zeros(ns,1) zeros(ns,1) zeros(ns,1)]';
+r = r(nx+1:end)';
 
 %% Set up some plots
 setUpPlots
 
 %% Run the ILC algorithm
-UNext = timesignal(timeseries([0 0],[0 1]));
+% Set the initial ILC inputs
+uwFFNext = timesignal(timeseries(zeros(size(Ss(1:end-1))),Ss(1:end-1)));
+urFFNext = timesignal(timeseries(zeros(size(Ss(1:end-1))),Ss(1:end-1)));
 for ii = 1:numIters
-    % Run the simulation
     
+    % Run the simulation
     sim('unifoil');
     
     % Post-process Data (get it into a signalcontainer object)
     tsc = signalcontainer(logsout);
     
-    % Update some plotting stuff
-    h.actualPath_iMin1.XData = h.actualPath_i.XData;
-    h.actualPath_iMin1.YData = h.actualPath_i.YData;
-    h.actualPath_iMin1Zm.XData = h.actualPath_iZm.XData;
-    h.actualPath_iMin1Zm.YData = h.actualPath_iZm.YData;
-    h.actualPath_i.XData = tsc.azimuth.Data*180/pi;
-    h.actualPath_i.YData = tsc.elevation.Data*180/pi;
-    h.actualPath_iZm.XData = tsc.azimuth.Data*180/pi;
-    h.actualPath_iZm.YData = tsc.elevation.Data*180/pi;
-    h.title.String = sprintf('$i = %d$',ii);
-    
-    %% Do operations for flexible time ILC
-    
     % Crop to just one lap
-    psc = processTSC(tsc,0:pathStep:1);
+    psc = processTSC(tsc,Ss);
     
-    % Fit the function Fx to match the data
-    [FxParams, ~] = fitFxPhase(psc);
-    
+    % Create some variables from the logged data
+    uFFPrev  = psc.uff.Data(1:end-nu)';
+            
     % Create continuous, linear, path parmeterized model
-    [Acp,Bcp] = pathLinearize(psc,basisParams,FxParams,tauRef,baseMass+addedMass);
+    [Acp,Bcp] = pathLinearize(psc,...
+        basisParams,...
+        wingC,ARefWing,tauRef,baseMass+addedMass,...
+        wingCtrlKp,wingTargetSpeed,...
+        density,flowSpeed);
     
     % Discretize the continuous, linear, path-domain model
-    [Adp,Bdp] = disc(Acp,Bcp,pathStep);
+    [Adp,Bdp] = disc(Acp,Bcp,Ss);
     
     % Lift the discrete, linear, path-domain model
     [F,G] = lift(Adp,Bdp);
     
     % Build the weighting matrices for the performance index
-    % Linear term
-    % Dot product weighting
-    Psivpsi = stateSelectionMatrix([3 4],5,ns);
-    Psivpsi = Psivpsi(sum(Psivpsi,2)~=0,:); % Eliminate empty rows
-    Psivpsi = spedWeight*Psivpsi;
-    [~,S] = lemOfGerono(0:pathStep:1,basisParams);
-    SMat = cell(ns,ns);
-    SMat(:) = {zeros(1,2)};
-    for jj = 1:ns
-        SMat(jj,jj) = {S(jj,:)};
-    end
-    SMat = cell2mat(SMat);
-    dUnder = cell(ns,ns);
-    dUnder(:) = {zeros(2,2)};
-    v = psc.stateVec.Data(3:5:end)';
-    psi = psc.stateVec.Data(4:5:end)';
-    for jj = 1:ns
-        dUnder{jj,jj} = [...
-            cos(psi(jj)) -v(jj).*sin(psi(jj));...
-            sin(psi(jj)) -v(jj).*cos(psi(jj))];
-    end
-    dUnder = cell2mat(dUnder);
-    fv = ones(1,size(S,1))*SMat*dUnder*Psivpsi;
-    % Time step weighting
-    Psiv = stateSelectionMatrix(3,5,ns);
-    dt = diff(psc.Time.Data);
-    dt(end+1) = dt(end);
-    dt = repmat(dt,[1,5])';
-    dt = dt(:);
-    fv = spedWeight*dt'*Psiv;
-    % Lifted, path-domain reference signal
-    r = cell(numel(Adp.Time),1);
-    r(:) = {zeros(5,1)};
-    for jj = 1:numel(posWayPtPathIdx)
-        r(posWayPtPathIdx(jj)) = {[wyPtAzimuth(jj) wyPtElevation(jj) 0 0 0]'};
-    end
-    r = cell2mat(r);
-    % Waypoint tracking term
-    PsiW    = wyptSelectionMatrix([1 2],posWayPtPathIdx,5,numel(Adp.Time));
-    QW      = wyptWeight*diag(ones(size(PsiW,1),1));
-    % Input variation term
-    Qu      = inptWeight*diag(ones(ns-1,1));
-    GHatj   = G'*PsiW'*QW*PsiW*G;
-    % Filters
-    L0 = (GHatj+Qu)^(-1);
-    Lc =  L0*(1/2)*G'*fv';
-    Le =  L0*G'*PsiW*QW;
-    
+    Fo = inv(0.5*((G'*Qe*G+Qu)'+(G'*Qe*G+Qu))); %Enforce symmetry
+    Fc = -0.5*Fo*(G'*Lx'+Lu');
+    Fe =      Fo*(G'*Qe);
+
     % Apply learning filters to calculate deviation in input signal
-    delUData = Lc+Le*(r-PsiW*psc.stateVec.Data(:));
-    delU = timesignal(timeseries(delUData,psc.pathVar.Data(1:end-1)));
+    uFFNext = uFFPrev + Fc + Fe*(r - psc.stateVec.Data(nx+1:end)');
+    
+    % Break these into individual signals and put into timesignals
+    uwFFNext = timesignal(timeseries(uFFNext(1:2:end),Ss(1:end-1)));
+    urFFNext = timesignal(timeseries(uFFNext(2:2:end),Ss(1:end-1)));
     
     updatePlots
-    
-    % Resample deviation in control signal into standard domain
-    if ii == 1
-        UNext = timesignal(timeseries(...
-            zeros(ns-1,1),...
-            0:pathStep:1-pathStep));
-    else
-        UNext = UNext.resample(delU.Time);
-    end
-    UNext = UNext + delU;
-    %     UNext = UNext.rmnans;
-
+%    savePlot(h.fig2,'output',sprintf('States%d',ii))
 end
-savePlot(h.fig1,'output',sprintf('DotProdWeighting_%d',ii))
+
+
 

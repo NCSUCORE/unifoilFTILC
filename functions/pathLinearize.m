@@ -1,4 +1,8 @@
-function [Ats,Bts] = pathLinearize(tsc,basisParams,FxParams,tauRef,mass)
+function [Ats,Bts] = pathLinearize(tsc,...
+    basisParams,...
+    wingCoeffs,Aref,tauRef,mass,...
+    kpw,vsp,...
+    density,flowSpeed)
 % The math behind this block is derived in the matlab notebook
 % Reparameterization.nb.  This notebook automatically outputs .txt files
 % containing matlab expressions for each element of A and B.
@@ -10,33 +14,31 @@ v       = tsc.speed.Data(:);
 psi     = tsc.twistAngle.Data(:);
 omega   = tsc.twistRate.Data(:);
 s       = tsc.pathVar.Data(:);
-u       = tsc.twistSP.Data(:);
+urfb    = tsc.urfb.Data(:);
+uwfb    = tsc.uwfb.Data(:);
+urff    = tsc.urff.Data(:);
+uwff    = tsc.uwff.Data(:);
 tau     = tauRef;
 M       = mass;
+rho     = density;
+sigma   = flowSpeed;
 
-% Read in all the variables stored in FxParams
-varNames = fields(FxParams);
-for ii = 1:numel(varNames)
-   eval(sprintf('%s = FxParams.%s;',varNames{ii},varNames{ii})); 
-end
+phi0   = basisParams(1);
+phi1   = basisParams(3);
+theta0 = basisParams(2);
+theta1 = basisParams(4);
+r      = basisParams(5);
 
-l = basisParams(1);
-m = basisParams(3);
-f = basisParams(2);
-n = basisParams(4);
+CL0 = wingCoeffs.CL0;
+CL1 = wingCoeffs.CL1;
+CD0 = wingCoeffs.CD0;
+CD1 = wingCoeffs.CD1;
+CD2 = wingCoeffs.CD2;
 
-r = basisParams(5);
-
-shapeSwitch = basisParams(6);
-if shapeSwitch == 1
-    fldr = 'Ellipse';
-else
-    fldr = 'Fig8';
-end
 
 % Preallocate A and B matrices
 A = zeros(5,5,numel(tsc.pathVar.Time));
-B = zeros(5,1,numel(tsc.pathVar.Time));
+B = zeros(5,2,numel(tsc.pathVar.Time));
 
 % Find the files with the A and B matrices in them as calculated in
 % Mathematica
@@ -46,16 +48,27 @@ basePath = fullfile(fileparts(which('UnifoilFTICL.prj')),'Documentation');
 for ii = 1:5
     for jj = 1:5
         fName = sprintf('A%d%d.txt',ii,jj);
-        expr  = fileread(fullfile(basePath,'MatrixElementExpressions',fldr,fName));
-        A(ii,jj,:) = eval(expr);
+        expr  = fileread(fullfile(basePath,'MatrixElementExpressions',fName));
+        try
+            A(ii,jj,:) = eval(expr);
+        catch
+            error('Error in A%d%D expression \n %s',ii,jj,expr)
+        end
     end
 end
 
 % Evaluate all the expressions for the elements of B
 for ii = 1:5
-    fName = sprintf('B%d.txt',ii);
-    expr  = fileread(fullfile(basePath,'MatrixElementExpressions',fldr,fName));
-    B(ii,:) = eval(expr);
+    for jj = 1:2
+        fName = sprintf('B%d%d.txt',ii,jj);
+        expr  = fileread(fullfile(basePath,'MatrixElementExpressions',fName));
+        try
+            B(ii,jj,:) = eval(expr);
+        catch
+            error('Error in B%d%D expression \n %s',ii,jj,expr)
+        end
+        
+    end
 end
 
 % Store everything into a timesignal for output

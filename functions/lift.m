@@ -9,26 +9,38 @@ function [F,G] = lift(A,B)
 % inputs A and B are 3D arrays of A and B matrices where the third index
 % runs along the parameterization variable.
 
-
+% Pull out the data
 A = A.Data;
 B = B.Data;
-ns = size(A,3);
-FblkDims = size(A(:,:,1));
+
+% Get the number of steps
+nSteps  = size(A,3);
+nStates = size(A,1);
+
+% Get the dimensions of the sub-blocks in the block matrices
+% FblkDims = size(A(:,:,1));
 GblkDims = size(A(:,:,1)*B(:,:,1));
+FblkDims = size(A(:,:,1));
+
 % Preallocate F as cell array, each cell is 1 block of block matrix
-F = cell(ns,1);
-F(:) = {zeros(FblkDims)};
-F{1} = eye(size(F{1}));
-% F{1} = A(:,:,1); % Set the first block
+F       =  cell(nSteps,1);
+F(:)    =  {zeros(FblkDims)};
 
 % Preallocate G as cell array, each cell is 1 block of block matrix
-G = cell(ns,ns-1);
-G(:,:) = {zeros(GblkDims)};
+G       =  cell(nSteps-1,nSteps-1);
+G(:)    = {zeros(GblkDims)};
 
-for ii = 2:ns % Run each row
-    F{ii} = A(:,:,ii-1)*F{ii-1};
-    G{ii,ii-1} = B(:,:,ii-1); % Set the lower, off-diagonal element
-    for jj = 1:ii-2 % set lower half elements by multiplying with the line above
+% Set the first elements of F and G
+F{1}    = A(:,:,1);
+G{1,1}  = B(:,:,1);
+
+for ii = 2:nSteps-1 % Run each row
+    % Set the next element of F
+    F{ii} = A(:,:,ii)*F{ii-1};
+    % Set diagonal element of G
+    G{ii,ii} = B(:,:,ii); 
+    % Set the elements to the left of the one-below-diagonal element of G
+    for jj = 1:ii-1 % run over columns
        G{ii,jj} = A(:,:,ii-1)*G{ii-1,jj};
     end
 end

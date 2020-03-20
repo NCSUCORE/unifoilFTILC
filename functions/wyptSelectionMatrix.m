@@ -1,14 +1,10 @@
-function Gamma = wyptSelectionMatrix(stateIdx,wyptIdx,nStates,nSteps)
-% Matrix to pick off specified state value at every time step
-Gamma = cell(nSteps,nSteps);
-% Set all block elements to zero sub matrics
-Gamma(:) = {zeros(nStates,nStates)};
-% Set block diagonal elements of block matrix to new sub matrix
-gamma = zeros(1,nStates);
-gamma(stateIdx) = 1;
-for ii = 1:numel(wyptIdx)
-    Gamma(wyptIdx(ii),wyptIdx(ii)) = {diag(gamma)};
-end
-% Convert cell block matrix to matrix
-Gamma = cell2mat(Gamma);
+function Gamma = wyptSelectionMatrix(wyptIdx,nStates,nSteps)
+% Preallocate cell array of input arguments for blkdiag command later
+args = cell(1,nSteps);
+% Make all the elements zero matrices
+args(:) = {zeros(nStates,nStates)};
+% Make the ones corresponding to waypoints identity matrices
+args(wyptIdx) = {eye(nStates)};
+% Call the blkdiag command
+Gamma = blkdiag(args{:});
 end

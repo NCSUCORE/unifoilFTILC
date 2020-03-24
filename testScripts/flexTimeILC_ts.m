@@ -58,7 +58,7 @@ wingTargetSpeed = 3.5;
 wingCtrlKp = 0.349;
 
 %% Initial Conditions
-initSpeed       = 5.735;
+initSpeed       = 4.15;
 initAzimuth     = meanAzimuth;
 initElevation   = meanElevation;
 initTwist       = -33*pi/180;%-22.5*pi/180;
@@ -66,16 +66,16 @@ initTwistRate   = 0;
 initPathVar     = 0;
 
 %% Flexible Time ILC Parameters
-numIters = 20;
+numIters = 75;
 
 % Number of states and control inputs
 nx = 5;
 nu = 2;
 % Path discretization parameters
-ns = 250;
+ns = 600;
 Ss = linspace(0,1,ns); % Set of all discretized path variables
 % Waypoint Specification
-Sw = [0.25 0.5 0.75 1]; % Set of path variables at the waypoints
+Sw = [0.25  0.75 1]; % Set of path variables at the waypoints
 nw = numel(Sw); % Number of waypoints
 Iw = cnvrtPathVar2Indx(Sw,Ss);
 
@@ -83,25 +83,31 @@ Iw = cnvrtPathVar2Indx(Sw,Ss);
 % Weights on linear state terms
 q1phi   = 0;
 q1theta = 0;
-q1v     = -5e-3;
+q1v     = (-10/ns);
 q1psi   = 0;
 q1omega = 0;
 q1x = [q1phi q1theta q1v q1psi q1omega];
-% Weights on quadratic state terms
-q2phi   = 400;
-q2theta = 400;
-q2v     = 0;
-q2psi   = 0;
-q2omega = 0;
-q2x = [q2phi q2theta q2v q2psi q2omega];
-
+% Weights on quadratic error terms
+qe2phi   = (0/nw)*(180/pi);
+qe2theta = (0/nw)*(180/pi);
+qe2v     = 0;
+qe2psi   = 0;
+qe2omega = 0;
+qe2x = [qe2phi qe2theta qe2v qe2psi qe2omega];
+% Weights on quadratic state deviation terms
+qx2phi   = (1/ns)*(180/pi);
+qx2theta = (1/ns)*(180/pi);
+qx2v     = (1/ns);
+qx2psi   = 0;
+qx2omega = 0;
+qx2x = [qx2phi qx2theta qx2v qx2psi qx2omega];
 % Weights on linear input terms
 q1uw = 0;
 q1ur = 0;
 q1u = [q1uw q1ur];
 % Weights on quadratic input terms
-q2uw = 0.5;
-q2ur = 0.5;
+q2uw = 10;
+q2ur = 2;
 q2u = [q2uw q2ur];
 
 % Derived quantities
@@ -112,10 +118,11 @@ wyPtElevation   = pi/2-acos(wyPtPosVecs(:,3)./sqrt(sum(wyPtPosVecs.^2,2)));
 % Build the weighting matrices for the performance index
 Lx = repmat(q1x,[1 ns-1]);
 Lu = repmat(q1u,[1 ns-1]);
-Wx = weightMatrix(q2x,ns-1);
+Wx = weightMatrix(qe2x,ns-1);
 Px = wyptSelectionMatrix(Iw-1,nx,ns-1);
 Qe = Px*Wx;
 Qu = weightMatrix(q2u,ns-1);
+Qx = weightMatrix(qx2x,ns-1);
 r  = [wyPtAzimuth(:) wyPtElevation(:) zeros(ns,1) zeros(ns,1) zeros(ns,1)]';
 r = r(nx+1:end)';
 
@@ -154,10 +161,11 @@ for ii = 1:numIters
     [F,G] = lift(Adp,Bdp);
     
     % Build the weighting matrices for the performance index
-    Fo = inv(0.5*((G'*Qe*G+Qu)'+(G'*Qe*G+Qu))); %Enforce symmetry
+    Fo = (G'*Qe*G + Qu);
+    Fo = inv(0.5*(Fo'+Fo)); %Enforce symmetry
     Fc = -0.5*Fo*(G'*Lx'+Lu');
     Fe =      Fo*(G'*Qe);
-
+    
     % Apply learning filters to calculate deviation in input signal
     uFFNext = uFFPrev + Fc + Fe*(r - psc.stateVec.Data(nx+1:end)');
     
@@ -165,9 +173,11 @@ for ii = 1:numIters
     uwFFNext = timesignal(timeseries(uFFNext(1:2:end),Ss(1:end-1)));
     urFFNext = timesignal(timeseries(uFFNext(2:2:end),Ss(1:end-1)));
     
+    % Update the plots and save the results
     updatePlots
-%    savePlot(h.fig2,'output',sprintf('States%d',ii))
+    savePlot(h.fig1,'output',sprintf('Summary%d',ii))
+    savePlot(h.fig2,'output',sprintf('States%d',ii))
+    savePlot(h.fig3,'output',sprintf('WingControl%d',ii))
+    savePlot(h.fig4,'output',sprintf('Fx%d',ii))
 end
-
-
 

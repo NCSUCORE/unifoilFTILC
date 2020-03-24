@@ -48,11 +48,15 @@ basePath = fullfile(fileparts(which('UnifoilFTICL.prj')),'Documentation');
 for ii = 1:5
     for jj = 1:5
         fName = sprintf('A%d%d.txt',ii,jj);
-        expr  = fileread(fullfile(basePath,'MatrixElementExpressions',fName));
+        str  = fileread(fullfile(basePath,'MatrixElementExpressions',fName));
+        if contains(str,'atan')
+            % replace atan from mathematica with my version
+            str = regexprep(str,'atan','myAtan');
+        end
         try
-            A(ii,jj,:) = eval(expr);
+            A(ii,jj,:) = eval(str);
         catch
-            error('Error in A%d%D expression \n %s',ii,jj,expr)
+            error('Error in A%d%D expression \n %s',ii,jj,str)
         end
     end
 end
@@ -61,11 +65,15 @@ end
 for ii = 1:5
     for jj = 1:2
         fName = sprintf('B%d%d.txt',ii,jj);
-        expr  = fileread(fullfile(basePath,'MatrixElementExpressions',fName));
+        str  = fileread(fullfile(basePath,'MatrixElementExpressions',fName));
+        if contains(str,'atan')
+            % replace atan from mathematica with my version
+            str = regexprep(str,'atan','myAtan');
+        end
         try
-            B(ii,jj,:) = eval(expr);
+            B(ii,jj,:) = eval(str);
         catch
-            error('Error in B%d%D expression \n %s',ii,jj,expr)
+            error('Error in B%d%d expression \n %s',ii,jj,str)
         end
         
     end
@@ -74,4 +82,10 @@ end
 % Store everything into a timesignal for output
 Ats = timesignal(timeseries(A,tsc.stateVec.Time));
 Bts = timesignal(timeseries(B,tsc.stateVec.Time));
+end
+
+function out = myAtan(x,y)
+% Mathematica atan has x as first argument, need to flip the order and do
+% atan2 in Matlab
+out = atan2(y,x);
 end

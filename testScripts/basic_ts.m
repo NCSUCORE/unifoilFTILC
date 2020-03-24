@@ -70,58 +70,15 @@ initTwist       = -33*pi/180;
 initTwistRate   = 0;
 initPathVar     = 0;
 
+%% Dummy ILC control signals
+uwFFNext = timesignal(timeseries(zeros(3,1),linspace(0,1,3)));
+urFFNext = uwFFNext;
+
+%%
 sim('unifoil')
 tscOpt = signalcontainer(logsout);
 
-% wingCtrlSwitch = 2;
-% sim('unifoil')
-% tscSubOpt = signalcontainer(logsout);
 
 %%
 figure
 tscOpt.speed.plot
-%% 
-% tscOpt.pathVar.Time(end)
-% tscSubOpt.pathVar.Time(end)
-% 
-% %%
-% figure
-% plot(tscOpt.azimuth.Data,tscOpt.elevation.Data)
-% grid on
-% hold on
-% plot(tscSubOpt.azimuth.Data,tscSubOpt.elevation.Data)
-% 
-% %%
-% figure
-% tscOpt.wingFx.plot
-% grid on
-% hold on
-% tscSubOpt.wingFx.plot
-% 
-% %%
-% figure
-% tscSubOpt.wingCmdPreSat.plot
-% grid on
-% hold on
-% tscSubOpt.wingCmd.plot
-% 
-% %%
-% figure
-% tscOpt.speed.plot
-% grid on
-% hold on
-% tscSubOpt.speed.plot
-
-%%
-% figure
-% subplot(2,1,1)
-% tscOpt.FLxPred.plot
-% grid on
-% hold on
-% tscOpt.FLxAct.plot
-% 
-% subplot(2,1,2)
-% tscOpt.FDxPred.plot
-% grid on
-% hold on
-% tscOpt.FDxAct.plot

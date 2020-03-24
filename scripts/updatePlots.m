@@ -7,7 +7,6 @@ JqxAct  = (r-xActPrev)'*Qe*(r-xActPrev);
 JluAct  = Lu*uFFPrev;
 JquAct  = (uFFNext-uFFPrev)'*Qu*(uFFNext-uFFPrev);
 
-
 % State trajectory predicted for next iteration
 xNextPred   = psc.stateVec.Data(nx+1:end)' + G*(uFFNext(:)-uFFPrev(:));
 
@@ -78,6 +77,18 @@ h.urffPrev.YData = psc.urff.Data*180/pi;
 h.urffNext.XData = urFFNext.Time;
 h.urffNext.YData = urFFNext.Data*180/pi;
 
+% Update the distances
+h.distPred.XData    = [h.distPred.XData ii+1];
+h.distPred.YData    = [h.distPred.YData arcLength(xNextPred(1:nx:end),xNextPred(2:nx:end),radius)];
+h.distAct.XData     = [h.distAct.XData ii];
+h.distAct.YData     = [h.distAct.YData arcLength(tsc.azimuth.Data(:),tsc.elevation.Data(:),radius)];
+
+% Update the average speed
+h.vAvgTime.XData = [h.vAvgTime.XData ii];
+h.vAvgTime.YData = [h.vAvgTime.YData tsc.speed.mean];
+h.vAvgPath.XData = [h.vAvgPath.XData ii];
+h.vAvgPath.YData = [h.vAvgPath.YData psc.speed.mean];
+
 h.title.String = sprintf('Iteration %d',ii);
 
 drawnow
@@ -118,4 +129,32 @@ h.omegaPred.YData = xNextPred(5:nx:end)*180/pi;
 h.domegaPred.XData = Ss(2:end);
 h.domegaPred.YData = (xNextPred(5:nx:end)-xActPrev(5:nx:end))*180/pi;
 
-% drawnow
+drawnow
+
+h.uw.XData = psc.pathVar.Data;
+h.uw.YData = psc.uw.Data*180/pi;
+h.uwOpt.XData = psc.pathVar.Data;
+h.uwOpt.YData = psc.uwOpt.Data*180/pi;
+
+
+h.gammaW.XData = psc.pathVar.Data;
+h.gammaW.YData = psc.wingGamma.Data*180/pi;
+h.gammaR.XData = psc.pathVar.Data;
+h.gammaR.YData = psc.rudderGamma.Data*180/pi;
+
+h.wingAlpha.XData = psc.pathVar.Data;
+h.wingAlpha.YData = psc.alphaWing.Data*180/pi;
+h.wingAlphaOpt.XData = psc.pathVar.Data;
+h.wingAlphaOpt.YData = psc.alphaWingOpt.Data*180/pi;
+
+drawnow
+
+h.fxAct.XData = psc.pathVar.Data;
+h.fxAct.YData = psc.Fx.Data;
+h.fxAct.DisplayName = sprintf('$F_{x,%d}^{Act}$',ii) ;
+
+h.fxPred.XData = Ss(2:end-1);
+h.fxPred.YData = (diff(xNextPred(3:nx:end))./diff(psc.Time.Data(1:end-1))).*(baseMass+addedMass);
+h.fxPred.DisplayName = sprintf('$F_{x,%d}^{Pred}$',ii+1) ;
+drawnow
+

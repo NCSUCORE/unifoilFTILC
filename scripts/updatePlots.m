@@ -4,16 +4,16 @@ xActPrev = psc.stateVec.Data(nx+1:end)';
 % Actual values of performance index over last iteration
 JlxAct  = Lx*xActPrev;
 JqxAct  = (r-xActPrev)'*Qe*(r-xActPrev);
-JluAct  = Lu*uFFPrev;
-JquAct  = (uFFNext-uFFPrev)'*Qu*(uFFNext-uFFPrev);
+JluAct  = Lu*uilcPrev;
+JquAct  = (uilcNext-uilcPrev)'*Qu*(uilcNext-uilcPrev);
 
 % State trajectory predicted for next iteration
-xNextPred   = psc.stateVec.Data(nx+1:end)' + G*(uFFNext(:)-uFFPrev(:));
+xNextPred   = psc.stateVec.Data(nx+1:end)' + G*(uilcNext(:)-uilcPrev(:));
 
 JlxPred     = Lx*xNextPred;
 JqxPred     = (r-xNextPred)'*Qe*(r-xNextPred);
-JluPred     = Lu*uFFNext;
-JquPred     = (uFFNext-uFFPrev)'*Qu*(uFFNext-uFFPrev);
+JluPred     = Lu*uilcNext;
+JquPred     = (uilcNext-uilcPrev)'*Qu*(uilcNext-uilcPrev);
 
 % Update the overall performance index
 h.perfIndxAct.XData  = [h.perfIndxAct.XData ii];
@@ -62,20 +62,20 @@ h.uw.XData = psc.uw.Time;
 h.uw.YData = psc.uw.Data*180/pi;
 h.uwfb.XData = psc.uwfb.Time;
 h.uwfb.YData = psc.uwfb.Data*180/pi;
-h.uwffPrev.XData = psc.uwff.Time;
-h.uwffPrev.YData = psc.uwff.Data*180/pi;
-h.uwffNext.XData = Ss(1:end-1);
-h.uwffNext.YData = uFFNext(1:nu:end)*180/pi;
+h.uwilcPrev.XData = psc.uwilc.Time;
+h.uwilcPrev.YData = psc.uwilc.Data*180/pi;
+h.uwilcNext.XData = Ss(1:end-1);
+h.uwilcNext.YData = uilcNext(1:nu:end)*180/pi;
 
 % Rudder control input
 h.ur.XData = psc.ur.Time;
 h.ur.YData = psc.ur.Data*180/pi;
 h.urfb.XData = psc.urfb.Time;
 h.urfb.YData = psc.urfb.Data*180/pi;
-h.urffPrev.XData = psc.urff.Time;
-h.urffPrev.YData = psc.urff.Data*180/pi;
-h.urffNext.XData = urFFNext.Time;
-h.urffNext.YData = urFFNext.Data*180/pi;
+h.urilcPrev.XData = psc.urilc.Time;
+h.urilcPrev.YData = psc.urilc.Data*180/pi;
+h.urilcNext.XData = urilcNext.Time;
+h.urilcNext.YData = urilcNext.Data*180/pi;
 
 % Update the distances
 h.distPred.XData    = [h.distPred.XData ii+1];
@@ -133,8 +133,8 @@ drawnow
 
 h.uw.XData = psc.pathVar.Data;
 h.uw.YData = psc.uw.Data*180/pi;
-h.uwOpt.XData = psc.pathVar.Data;
-h.uwOpt.YData = psc.uwOpt.Data*180/pi;
+% h.uwOpt.XData = psc.pathVar.Data;
+% h.uwOpt.YData = psc.uwOpt.Data*180/pi;
 
 
 h.gammaW.XData = psc.pathVar.Data;
@@ -144,8 +144,8 @@ h.gammaR.YData = psc.rudderGamma.Data*180/pi;
 
 h.wingAlpha.XData = psc.pathVar.Data;
 h.wingAlpha.YData = psc.alphaWing.Data*180/pi;
-h.wingAlphaOpt.XData = psc.pathVar.Data;
-h.wingAlphaOpt.YData = psc.alphaWingOpt.Data*180/pi;
+% h.wingAlphaOpt.XData = psc.pathVar.Data;
+% h.wingAlphaOpt.YData = psc.alphaWingOpt.Data*180/pi;
 
 drawnow
 

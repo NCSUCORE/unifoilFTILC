@@ -15,6 +15,8 @@ end
 h.fltPathsAx  = subplot(nRow,nCol,[1 2],'NextPlot','add','XGrid','on','YGrid','on');
 h.targetPath  = plot(pathAz,pathEl,...
     'LineWidth',2,'Color','r','LineStyle',':','DisplayName','Target Path');
+h.wypts = scatter(wyPtAzimuth*180/pi,wyPtElevation*180/pi,'Marker','x',...
+    'DisplayName','Waypoint','CData',[0 0 0],'SizeData',72);
 h.actualPath_iMin1  = plot(nan,nan,'Color','k','DisplayName',...
     '$i-1$ Actual','LineStyle','-');
 h.actualPath_i      = plot(nan,nan,'Color',[0 0.75 0],'DisplayName',...
@@ -31,8 +33,8 @@ h.title = title('');
 h.wingCtrlAx = subplot(nRow,nCol,nCol+1,'NextPlot','add','XGrid','on','YGrid','on');
 h.uw        = plot(nan,nan,'Color','k','DisplayName','$u_{w}^{prev}$','LineStyle','-');
 h.uwfb      = plot(nan,nan,'Color','b','DisplayName','$u_{w,fb}^{prev}$','LineStyle','-');
-h.uwffPrev  = plot(nan,nan,'Color','r','DisplayName','$u_{w,ff}^{prev}$','LineStyle','-');
-h.uwffNext  = plot(nan,nan,'Color','g','DisplayName','$u_{w,ff}^{next}$','LineStyle','-');
+h.uwilcPrev  = plot(nan,nan,'Color','r','DisplayName','$u_{w,ff}^{prev}$','LineStyle','-');
+h.uwilcNext  = plot(nan,nan,'Color','g','DisplayName','$u_{w,ff}^{next}$','LineStyle','-');
 xlim([0 1])
 xlabel('Path Var')
 ylabel('[deg]')
@@ -44,8 +46,8 @@ yyaxis left
 h.ur        = plot(nan,nan,'Color','k','DisplayName','$u_{r}^{prev}$','LineStyle','-');
 h.urfb      = plot(nan,nan,'Color','b','DisplayName','$u_{r,fb}^{prev}$','LineStyle','-');
 yyaxis right
-h.urffPrev  = plot(nan,nan,'Color','r','DisplayName','$u_{r,ff}^{prev}$','LineStyle','-');
-h.urffNext  = plot(nan,nan,'Color','g','DisplayName','$u_{r,ff}^{next}$','LineStyle','-');
+h.urilcPrev  = plot(nan,nan,'Color','r','DisplayName','$u_{r,ff}^{prev}$','LineStyle','-');
+h.urilcNext  = plot(nan,nan,'Color','g','DisplayName','$u_{r,ff}^{next}$','LineStyle','-');
 xlim([0 1])
 xlabel('Path Var')
 ylabel('[deg]')
@@ -96,13 +98,13 @@ xlim([1 numIters]);
 xlabel('Iteration Num, j')
 ylabel('Lin. State Term')
 
-% Quadratic state term
+% Quadratic error term
 h.qxAx      = subplot(nRow,nCol,nRow*nCol-1,'NextPlot','add','XGrid','on','YGrid','on');
 h.qxAct     = scatter(nan,nan);
 h.qxPred    = scatter(nan,nan,'Marker','x');
 xlim([1 numIters]);
 xlabel('Iteration Num, j')
-ylabel('Quad. State Term')
+ylabel('Quad. Error Term')
 
 % Linear state term
 h.luAx      = subplot(nRow,nCol,2*nCol,'NextPlot','add','XGrid','on','YGrid','on');
@@ -118,7 +120,7 @@ h.quAct     = scatter(nan,nan);
 h.quPred    = scatter(nan,nan,'Marker','x');
 xlim([1 numIters]);
 xlabel('Iteration Num, j')
-ylabel('Quad. Input Term')
+ylabel({'Quad. Input','Dev. Term'})
 
 %% Path shape inset
 % h.zoomAx = axes(gcf,'Units','Normalize','Position',[0.4104    0.5944    0.0990    0.1564]);

@@ -10,7 +10,11 @@ tsc.Time = timesignal(timeseries(tsc.pathVar.Time,tsc.pathVar.Time));
 % Resample all signals to match time vector of path variable
 sigNames = tsc.getpropsexcept({'pathVar','metaData'});
 for ii = 1:numel(sigNames)
+    try
     tsc.(sigNames{ii}) = tsc.(sigNames{ii}).resample(tsc.pathVar.Time);
+    catch
+         x = 1;
+    end
 end
 
 % Crop to first lap + 1 time step

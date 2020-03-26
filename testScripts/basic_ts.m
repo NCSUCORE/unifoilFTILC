@@ -71,8 +71,8 @@ initTwistRate   = 0;
 initPathVar     = 0;
 
 %% Dummy ILC control signals
-uwFFNext = timesignal(timeseries(zeros(3,1),linspace(0,1,3)));
-urFFNext = uwFFNext;
+uwILCNext = timesignal(timeseries(zeros(3,1),linspace(0,1,3)));
+urILCNext = uwILCNext;
 
 %%
 sim('unifoil')

@@ -4,7 +4,7 @@
 clear;close all
 
 %% Simulation Options
-T = 100; % Simulation duration
+T = 1500; % Simulation duration
 
 %% Kite properties
 % Physical properties
@@ -45,8 +45,8 @@ refGain2        = 2/tauRef;
 maxLeadLength   = 0.05;
 maxIntAngle     = 10*pi/180;
 % Min and max alpha for the wing controller
-wingAlphaPlusStall  =  10*pi/180;
-wingAlphaMinusStall = -10*pi/180;
+wingAlphaPlusStall  =  30*pi/180;
+wingAlphaMinusStall = -30*pi/180;
 % Min and max alpha for the rudder controller
 rudderAlphaPlusStall    =  6*pi/180;
 rudderAlphaMinusStall   = -6*pi/180;
@@ -66,7 +66,7 @@ initTwistRate   = 0;
 initPathVar     = 0;
 
 %% Flexible Time ILC Parameters
-numIters = 75;
+numIters = 100;
 
 % Number of states and control inputs
 nx = 5;
@@ -75,7 +75,7 @@ nu = 2;
 ns = 600;
 Ss = linspace(0,1,ns); % Set of all discretized path variables
 % Waypoint Specification
-Sw = [0.25  0.75 1]; % Set of path variables at the waypoints
+Sw = [0.25 0.5 0.75 1]; % Set of path variables at the waypoints
 nw = numel(Sw); % Number of waypoints
 Iw = cnvrtPathVar2Indx(Sw,Ss);
 
@@ -83,21 +83,21 @@ Iw = cnvrtPathVar2Indx(Sw,Ss);
 % Weights on linear state terms
 q1phi   = 0;
 q1theta = 0;
-q1v     = (-10/ns);
+q1v     = (-1/(ns*1)); % none per path step per mps
 q1psi   = 0;
 q1omega = 0;
 q1x = [q1phi q1theta q1v q1psi q1omega];
 % Weights on quadratic error terms
-qe2phi   = (0/nw)*(180/pi);
-qe2theta = (0/nw)*(180/pi);
+qe2phi   = (1)/(nw*(1*pi/180)^2); %(none per rad^2 per waypoint)
+qe2theta = (1)/(nw*(1*pi/180)^2); %(none per rad^2 per waypoint)
 qe2v     = 0;
 qe2psi   = 0;
 qe2omega = 0;
 qe2x = [qe2phi qe2theta qe2v qe2psi qe2omega];
 % Weights on quadratic state deviation terms
-qx2phi   = (1/ns)*(180/pi);
-qx2theta = (1/ns)*(180/pi);
-qx2v     = (1/ns);
+qx2phi   = (1)/(ns*(1*pi/180)^2); %(none per rad^2 per path step)
+qx2theta = (1)/(ns*(1*pi/180)^2); %(none per rad^2 per path step)
+qx2v     = (1)/(ns*(1)^2); %(none per mps^2 per path step)
 qx2psi   = 0;
 qx2omega = 0;
 qx2x = [qx2phi qx2theta qx2v qx2psi qx2omega];
@@ -105,15 +105,19 @@ qx2x = [qx2phi qx2theta qx2v qx2psi qx2omega];
 q1uw = 0;
 q1ur = 0;
 q1u = [q1uw q1ur];
-% Weights on quadratic input terms
-q2uw = 10;
-q2ur = 2;
+% Weights on quadratic input deviation terms
+q2uw = (1)/(ns*(1*pi/180)^2); %none per radian squared per path step
+q2ur = (1)/(ns*(1*pi/180)^2); %none per radian squared per path step
 q2u = [q2uw q2ur];
 
 % Derived quantities
-wyPtPosVecs     = lemOfGerono(Ss,basisParams);
+pathPosVecs     = lemOfGerono(Ss,basisParams);
+pathAz   = atan2(pathPosVecs(:,2),pathPosVecs(:,1));
+pathEl   = pi/2-acos(pathPosVecs(:,3)./sqrt(sum(pathPosVecs.^2,2)));
+wyPtPosVecs     = lemOfGerono(Sw,basisParams);
 wyPtAzimuth     = atan2(wyPtPosVecs(:,2),wyPtPosVecs(:,1));
 wyPtElevation   = pi/2-acos(wyPtPosVecs(:,3)./sqrt(sum(wyPtPosVecs.^2,2)));
+
 
 % Build the weighting matrices for the performance index
 Lx = repmat(q1x,[1 ns-1]);
@@ -123,16 +127,16 @@ Px = wyptSelectionMatrix(Iw-1,nx,ns-1);
 Qe = Px*Wx;
 Qu = weightMatrix(q2u,ns-1);
 Qx = weightMatrix(qx2x,ns-1);
-r  = [wyPtAzimuth(:) wyPtElevation(:) zeros(ns,1) zeros(ns,1) zeros(ns,1)]';
-r = r(nx+1:end)';
+r  = [pathAz(:) pathEl(:) zeros(ns,1) zeros(ns,1) zeros(ns,1)]';
+r  = r(nx+1:end)';
 
 %% Set up some plots
 setUpPlots
 
 %% Run the ILC algorithm
 % Set the initial ILC inputs
-uwFFNext = timesignal(timeseries(zeros(size(Ss(1:end-1))),Ss(1:end-1)));
-urFFNext = timesignal(timeseries(zeros(size(Ss(1:end-1))),Ss(1:end-1)));
+uwilcNext = timesignal(timeseries(zeros(size(Ss(1:end-1))),Ss(1:end-1)));
+urilcNext = timesignal(timeseries(zeros(size(Ss(1:end-1))),Ss(1:end-1)));
 for ii = 1:numIters
     
     % Run the simulation
@@ -145,8 +149,14 @@ for ii = 1:numIters
     psc = processTSC(tsc,Ss);
     
     % Create some variables from the logged data
-    uFFPrev  = psc.uff.Data(1:end-nu)';
-            
+    if ii == 1
+        wingCtrlKp = 0;
+        uilcPrev = [psc.uwfb.Data(:) psc.urilc.Data(:)];
+        psc.uilc = timesignal(timeseries(permute(uilcPrev,[2 3 1]),...
+            psc.pathVar.Time));
+    end
+    uilcPrev  = psc.uilc.Data(1:end-nu)';
+    
     % Create continuous, linear, path parmeterized model
     [Acp,Bcp] = pathLinearize(psc,...
         basisParams,...
@@ -167,14 +177,15 @@ for ii = 1:numIters
     Fe =      Fo*(G'*Qe);
     
     % Apply learning filters to calculate deviation in input signal
-    uFFNext = uFFPrev + Fc + Fe*(r - psc.stateVec.Data(nx+1:end)');
+    uilcNext = uilcPrev + Fc + Fe*(r - psc.stateVec.Data(nx+1:end)');
     
     % Break these into individual signals and put into timesignals
-    uwFFNext = timesignal(timeseries(uFFNext(1:2:end),Ss(1:end-1)));
-    urFFNext = timesignal(timeseries(uFFNext(2:2:end),Ss(1:end-1)));
+    uwilcNext = timesignal(timeseries(uilcNext(1:2:end),Ss(1:end-1)));
+    urilcNext = timesignal(timeseries(uilcNext(2:2:end),Ss(1:end-1)));
     
     % Update the plots and save the results
     updatePlots
+    x = 1;
     savePlot(h.fig1,'output',sprintf('Summary%d',ii))
     savePlot(h.fig2,'output',sprintf('States%d',ii))
     savePlot(h.fig3,'output',sprintf('WingControl%d',ii))

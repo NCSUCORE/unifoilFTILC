@@ -10,33 +10,112 @@
 \usepackage{tabularx}
 \usepackage[margin=0.25in]{geometry}
 \begin{document}
+
+
+Define deviations in signals between iterations:
 \begin{align}
-J_{j+1} &= L_x x_{j+1} + L_u u_{j+1} + e_{j+1}^TQ_e e_{j+1} + \delta u_{j}^TQ_u \delta u_{j} + \delta x_j^T Q_x \delta x_j\\
-&= L_x \left(x_j + G_j u_{j+1} -G_j u_j\right) + L_u u_{j+1} +\left(r-x_{j+1} \right)^TQ_e \left(r-x_{j+1} \right) + \left(u_{j+1}-u_j\right)^T Q_u \left(u_{j+1}-u_j\right) + \left(x_{j+1} - x_j \right)^T Q_x \left(x_{j+1} - x_j \right)\\
-&= L_x \left(x_j + G_j u_{j+1} -G_j u_j\right) + L_u u_{j+1} +\left(r-\left(x_j + G_j u_{j+1} -G_j u_j\right) \right)^TQ_e \left(r-\left(x_j + G_j u_{j+1} -G_j u_j\right) \right) + \left(u_{j+1}-u_j\right)^T Q_u \left(u_{j+1}-u_j\right)+ \left(\left(x_j + G_j u_{j+1} -G_j u_j\right) - x_j \right)^T Q_x \left(\left(x_j + G_j u_{j+1} -G_j u_j\right) - x_j \right)\\
-&= L_x \left(x_j + G_j u_{j+1} -G_j u_j\right) + L_u u_{j+1} +\left(r- x_j - G_j u_{j+1} +G_j u_j \right)^TQ_e \left(r-x_j - G_j u_{j+1} +G_j u_j \right) + \left(u_{j+1}-u_j\right)^T Q_u \left(u_{j+1}-u_j\right) + \left( u_{j+1} - u_{j} \right)^T G_j^T Q_x G_j \left( u_{j+1} - u_{j} \right)\\
-&= L_x \left(x_j + G_j u_{j+1} -G_j u_j\right) + L_u u_{j+1} +\left(r- x_j - G_j u_{j+1} +G_j u_j \right)^TQ_e \left(r-x_j - G_j u_{j+1} +G_j u_j \right) + \left(u_{j+1}-u_j\right)^T \left( Q_u + G_j^T Q_x G_j \right) \left(u_{j+1}-u_j\right) \\
+\delta x_j & = x_{j+1} - x_j\\
+\delta x_j^0 & = x_{j+1}^0 - x_j^0\\
+\delta u_j & = u_{j+1} - u_j\\
+\delta e_j & = e_{j+1} - e_j = r - x_{j+1} - e_j\\
 \end{align}
+
+The expression for the lifted model is:
 \begin{align}
-\frac{dj_{j+1}}{du_{j+1}}& = L_x G_j + L_u -2\left(r- x_j - G_j u_{j+1} +G_j u_j \right)^T Q_e G_j +2\left(u_{j+1}-u_j\right)^T \left( Q_u + G_j^T Q_x G_j \right)\\
-& = L_x G_j + L_u - 2 r^T Q_e G_j   + 2 x_j^T Q_e G_j + 2 (G_j u_{j+1})^T Q_e G_j - 2 (G_j u_j)^T Q_e G_j + 2 u_{j+1}^T \hat{Q}_u       - 2 u_j^T \hat{Q}_u\\
-& = L_x G_j + L_u - 2 r^T Q_e G_j   + 2 x_j^T Q_e G_j + 2 u_{j+1}^T G_j^T Q_e G_j - 2 u_j^T G_j^T Q_e G_j + 2 u_{j+1}^T \hat{Q}_u       - 2 u_j^T \hat{Q}_u\\
-& = L_x G_j + L_u - 2 r^T Q_e G_j   + 2 x_j^T Q_e G_j + 2 u_{j+1}^T G_j^T Q_e G_j + 2 u_{j+1}^T \hat{Q}_u       - 2 u_j^T G_j^T Q_e G_j - 2 u_j^T \hat{Q}_u\\
-& = L_x G_j + L_u - 2 e_j^T Q_e G_j                   + 2 u_{j+1}^T G_j^T Q_e G_j + 2 u_{j+1}^T \hat{Q}_u       - 2 u_j^T G_j^T Q_e G_j - 2 u_j^T \hat{Q}_u\\
-& = L_x G_j + L_u - 2 e_j^T Q_e G_j                   + 2 u_{j+1}^T \left(G_j^T Q_e G_j + \hat{Q}_u\right)      - 2 u_j^T \left( G_j^T Q_e G_j + \hat{Q}_u\right)\\
-& = L_x G_j + L_u - 2 e_j^T Q_e G_j                   + 2 u_{j+1}^T \left(G_j^T \left(Q_e + Q_x\right) G_j + Q_u\right)      - 2 u_j^T \left( G_j^T \left(Q_e + Q_x\right) G_j + Q_u\right)\\
+x_{j+1} & = x_{j} + G_j \delta u_{j}           + F_j \delta x^0_{j}\\
+		& = x_{j} + G_j \left(u_{j+1}-u_j\right) + F_j \left(x^0_{j+1}-x^0_j\right)\\
+		& = x_{j} + G_j u_{j+1} - G_j u_j        + F_j x^0_{j+1} - F_j x^0_j\\
 \end{align}
+
+Next, define two matrices that ``pick off'' the state vector from a lifted state vector at the first and last path step, $E_I$, and $E_F$.  Because the last state vector from the previous iteration is the first state vector of the next iteration, we can then write the following relationships:
 \begin{align}
-\vec{0}   & = L_x G_j + L_u - 2 e_j^T Q_e G_j + 2 u_{j+1}^T \left(G_j^T \left(Q_e + Q_x\right) G_j + Q_u\right) - 2 u_j^T \left( G_j^T \left(Q_e + Q_x\right) G_j + Q_u\right)\\
-u_{j+1}^T \left(G_j^T \left(Q_e + Q_x\right) G_j + Q_u\right) & =  e_j^T Q_e G_j + u_j^T \left( G_j^T \left(Q_e + Q_x\right) G_j + Q_u\right) -\frac{1}{2}\left(L_x G_j + L_u\right)\\
-\left(G_j^T \left(Q_e + Q_x\right) G_j + Q_u\right) u_{j+1}  & =  G_j^T Q_e e_j +  \left(G_j^T \left(Q_e + Q_x\right) G_j + Q_u\right) u_j -\frac{1}{2}\left(G_j^T L_x^T  + L_u^T\right)\\
-u_{j+1}  & =  F_o G_j^T Q_e e_j +  u_j -\frac{1}{2}F_o\left(G_j^T L_x^T  + L_u^T\right)\\
-u_{j+1}  & =  u_j + F_e e_j + F_c\\
+x_{j}^0 & = E_I x_j \\
+x_{j+1}^0 & = E_F x_j
 \end{align}
+
+Using these to simplify the lifted model then gives
 \begin{align}
-F_o & \triangleq \left(G_j^T \left(Q_e + Q_x\right) G_j + Q_u\right)^{-1}\\
-F_c & \triangleq -\frac{1}{2}F_o\left(G_j^T L_x^T  + L_u^T\right) \\
-F_e & \triangleq F_o G_j^T Q_e\\
-\hat{Q}_u & \triangleq Q_u + G_j^T Q_x G_j
+x_{j+1} & = x_{j} + G_j u_{j+1} - G_j u_j        + F_j E_F x_j - F_j E_I x_j\\
+        & = \left(\mathbb{I} +F_j \left(E_F - E_I\right) \right)x_{j} + G_j u_{j+1} - G_j u_j\\
+        & = \left(\mathbb{I} +F_j \Delta \right)x_{j} + G_j u_{j+1} - G_j u_j\\
 \end{align}
+where $\Delta \triangleq E_F-E_I$.
+
+
+Error at the next iteration based on the lifted model:
+\begin{align}
+e_{j+1} = r - x_{j+1} & = r - \left(\left(\mathbb{I} +F_j \Delta \right)x_{j} + G_j u_{j+1} - G_j u_j\right)\\
+					  & = r - \left(\mathbb{I} +F_j \Delta \right)x_{j} - G_j u_{j+1} + G_j u_j\\
+\end{align}
+
+Write performance in terms of the control input sequence $u_{j+1}$
+\begin{align}
+J_{j+1} & = u_{j+1}^T Q_u u_{j+1} +  \delta u_{j}^T Q_{\delta u} \delta u_{j} + e_{j+1}^T  Q_e e_{j+1} + \delta e_{j}^T Q_{\delta e} \delta e_{j} + \delta x_j^T Q_{\delta x} \delta x_j + S_x x_{j+1}\\
+& = u_{j+1}^T Q_u u_{j+1} + \left(u_{j+1} - u_j\right)^T Q_{\delta u} \left(u_{j+1} - u_j\right)\\
+& \quad + \left(r - \left(\mathbb{I} +F_j \Delta \right)x_{j} - G_j u_{j+1} + G_j u_j \right)^T  Q_e \left( r - \left(\mathbb{I} +F_j \Delta \right)x_{j} - G_j u_{j+1} + G_j u_j \right) + \left( r - \left(\mathbb{I} +F_j \Delta \right)x_{j} - G_j u_{j+1} + G_j u_j - e_j \right)^T Q_{\delta e} \left(r - \left(\mathbb{I} +F_j \Delta \right)x_{j} - G_j u_{j+1} + G_j u_j - e_j \right) \\
+& \quad + \left( \left(\mathbb{I} +F_j \Delta \right)x_{j} + G_j u_{j+1} - G_j u_j - x_j\right)^T Q_{\delta x} \left( \left(\mathbb{I} +F_j \Delta \right)x_{j} + G_j u_{j+1} - G_j u_j -x_j\right) + S_x \left( \left(\mathbb{I} + F_j E_T \right) x_{j} + G_j u_{j+1} - G_j u_j - F_j x^0_j - x_j \right)\\
+\end{align}
+
+Noting that 
+\begin{align}
+r - \left(\mathbb{I} +F_j \Delta \right)x_{j} - G_j u_{j+1} + G_j u_j       & = e_j + F_j \Delta x_{j} - G_j u_{j+1} + G_j u_j \\
+r - \left(\mathbb{I} +F_j \Delta \right)x_{j} - G_j u_{j+1} + G_j u_j - e_j & = F_j \Delta x_{j} - G_j u_{j+1} + G_j u_j\\
+    \left(\mathbb{I} +F_j \Delta \right)x_{j} + G_j u_{j+1} - G_j u_j - x_j & = F_j \Delta x_{j} + G_j u_{j+1} - G_j u_j
+\end{align}
+
+We can simplify this expression for $J_{j+1}$:
+\begin{align}
+J_{j+1} & = u_{j+1}^T Q_u u_{j+1} + \left(u_{j+1} - u_j\right)^T Q_{\delta u} \left(u_{j+1} - u_j\right)\\
+& \quad + \left(e_j + F_j \Delta x_{j} - G_j u_{j+1} + G_j u_j \right)^T  Q_e \left( e_j + F_j \Delta x_{j} - G_j u_{j+1} + G_j u_j \right) + \left( F_j \Delta x_{j} - G_j u_{j+1} + G_j u_j \right)^T Q_{\delta e} \left(F_j \Delta x_{j} - G_j u_{j+1} + G_j u_j \right) \\
+& \quad + \left( F_j \Delta x_{j} + G_j u_{j+1} - G_j u_j \right)^T Q_{\delta x} \left( F_j \Delta x_{j} + G_j u_{j+1} - G_j u_j \right) + S_x \left( \left(\mathbb{I} + F_j E_T \right) x_{j} + G_j u_{j+1} - G_j u_j - F_j x^0_j - x_j \right)\\
+\end{align}
+
+Now, differentiate this expression with respect to the next control input sequence, $u_{j+1}$ note that all $Q$'s are symmetric:
+\begin{align}
+\frac{d J_{j+1}}{d u_{j+1}} & = 2 u_{j+1}^T Q_u + 2 \left(u_{j+1} - u_j\right)^T Q_{\delta u}\\
+& \quad - 2 \left(e_j + F_j \Delta x_{j} - G_j u_{j+1} + G_j u_j \right)^T  Q_e G_j - 2 \left( F_j \Delta x_{j} - G_j u_{j+1} + G_j u_j \right)^T Q_{\delta e} G_j \\
+& \quad + 2 \left( F_j \Delta x_{j} + G_j u_{j+1} - G_j u_j \right)^T Q_{\delta x} G_j + S_x G_j
+\end{align}
+
+Gather all the $u_{j+1}$ and $u_j$ terms:
+\begin{align}
+\frac{d J_{j+1}}{d u_{j+1}} & = 2 u_{j+1}^T \left(Q_u + Q_{\delta u}  + G_j^T\left( Q_e + Q_{\delta_e} + Q_{\delta x} \right) G_j\right) - 2 u_j^T\left( Q_{\delta u} + G_j^T\left( Q_e + Q_{\delta_e} + Q_{\delta x} \right) G_j \right)\\
+& \quad - 2 \left(e_j + F_j \Delta x_{j} \right)^T  Q_e G_j - 2 \left( F_j \Delta x_{j} \right)^T Q_{\delta e} G_j \\
+& \quad + 2 \left( F_j \Delta x_{j} \right)^T Q_{\delta x} G_j + S_x G_j
+\end{align}
+
+Gather the $x_{j}$ terms
+\begin{align}
+\frac{d J_{j+1}}{d u_{j+1}}  = 2 u_{j+1}^T \left(Q_u + Q_{\delta u}  + G_j^T\left( Q_e + Q_{\delta_e} + Q_{\delta x} \right) G_j\right) - 2 u_j^T\left( Q_{\delta u} + G_j^T\left( Q_e + Q_{\delta_e} + Q_{\delta x} \right) G_j \right)  - 2 e_j^T Q_e G_j - 2 x_j^T \Delta ^T F_j^T \left( Q_e + Q_{\delta e} - Q_{\delta x} \right) G_j + S_x G_j
+\end{align}
+
+Set this equal to zero, divide through by 2 and re-arrange so that the $u_{j+1}$ term is on the left side and the others are on the right:
+\begin{align}
+ u_{j+1}^T \left(Q_u + Q_{\delta u}  + G_j^T\left( Q_e + Q_{\delta_e} + Q_{\delta x} \right) G_j\right) = u_j^T \left( Q_{\delta u} + G_j^T\left( Q_e + Q_{\delta_e} + Q_{\delta x} \right) G_j \right)  +  e_j^T Q_eG_j + x_j^T \Delta ^T F_j^T \left( Q_e + Q_{\delta e} + Q_{\delta x} \right) G_j - \frac{1}{2} S_x G_j
+\end{align}
+
+Transpose both sides, note that all $Q$'s are symmetric and in general for any matrix $A$ and a symmetric $B$, $A^TBA$ is symmetric:
+\begin{align}
+\left(Q_u + Q_{\delta u}  + G_j^T\left( Q_e + Q_{\delta_e} + Q_{\delta x} \right) G_j\right) u_{j+1} = \left( Q_{\delta u} + G_j^T\left( Q_e + Q_{\delta_e} + Q_{\delta x} \right) G_j \right) u_j  +  G_j^T Q_e e_j + G_j^T \left( Q_e + Q_{\delta e} - Q_{\delta x} \right) F_j \Delta x_j - \frac{1}{2} G_j^T S_x^T
+\end{align}
+
+So then the update law is:
+\begin{align}
+u_{j+1} =  L_u u_j + L_e e_j + L_x x_{j} + L_c
+\end{align}
+
+Where
+\begin{align}
+L_0 \triangleq & \left(Q_u + Q_{\delta u}  + G_j^T\left( Q_e + Q_{\delta_e} + Q_{\delta x} \right) G_j\right)^{-1} \\
+L_u \triangleq &  L_0\left( Q_{\delta u} + G_j^T\left( Q_e + Q_{\delta_e} + Q_{\delta x} \right) \right) \\
+L_e \triangleq &  L_0 G_j^T Q_e\\
+L_x \triangleq &  L_0 G_j^T \left( Q_e + Q_{\delta e} - Q_{\delta x}\right)F_j \Delta\\
+L_c \triangleq &  -\frac{1}{2} L_0 G_j^T S_x^T
+\end{align}
+
+A couple thoughts/sanity checks:
+\begin{itemize}
+	\item if $Q_u$ is a matrix of zeros then $L_u$ reduces to the identity matrix, which is what I had before (first page)
+	\item the $L_x$ term now includes the final/initial condition deviation
+\end{itemize} 
 \end{document}

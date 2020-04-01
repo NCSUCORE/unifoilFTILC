@@ -66,13 +66,13 @@ initTwistRate   = 0;
 initPathVar     = 0;
 
 %% Flexible Time ILC Parameters
-numIters = 100;
+numIters = 40;
 
 % Number of states and control inputs
 nx = 5;
 nu = 2;
 % Path discretization parameters
-ns = 600;
+ns = 400;
 Ss = linspace(0,1,ns); % Set of all discretized path variables
 % Waypoint Specification
 Sw = [0.25 0.5 0.75 1]; % Set of path variables at the waypoints
@@ -83,7 +83,7 @@ Iw = cnvrtPathVar2Indx(Sw,Ss);
 % Weights on linear state terms
 q1phi   = 0;
 q1theta = 0;
-q1v     = (-1/(ns*1)); % none per path step per mps
+q1v     = (-1/(ns*2)); % none per path step per mps
 q1psi   = 0;
 q1omega = 0;
 q1x = [q1phi q1theta q1v q1psi q1omega];
@@ -106,8 +106,8 @@ q1uw = 0;
 q1ur = 0;
 q1u = [q1uw q1ur];
 % Weights on quadratic input deviation terms
-q2uw = (1)/(ns*(1*pi/180)^2); %none per radian squared per path step
-q2ur = (1)/(ns*(1*pi/180)^2); %none per radian squared per path step
+q2uw = (1)/(ns*(2*pi/180)^2); %none per radian squared per path step
+q2ur = (1)/(ns*(2*pi/180)^2); %none per radian squared per path step
 q2u = [q2uw q2ur];
 
 % Derived quantities
@@ -183,9 +183,15 @@ for ii = 1:numIters
     uwilcNext = timesignal(timeseries(uilcNext(1:2:end),Ss(1:end-1)));
     urilcNext = timesignal(timeseries(uilcNext(2:2:end),Ss(1:end-1)));
     
+%     initSpeed       = tsc.stateVec.Data(3,1,end);
+%     initAzimuth     = tsc.stateVec.Data(1,1,end);
+%     initElevation   = tsc.stateVec.Data(2,1,end);
+%     initTwist       = tsc.stateVec.Data(4,1,end);%-22.5*pi/180;
+%     initTwistRate   = tsc.stateVec.Data(5,1,end);
+    
     % Update the plots and save the results
     updatePlots
-    x = 1;
+    
     savePlot(h.fig1,'output',sprintf('Summary%d',ii))
     savePlot(h.fig2,'output',sprintf('States%d',ii))
     savePlot(h.fig3,'output',sprintf('WingControl%d',ii))

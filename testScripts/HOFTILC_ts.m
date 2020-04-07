@@ -66,7 +66,7 @@ initTwistRate   = 0;
 initPathVar     = 0;
 
 %% Flexible Time ILC Parameters
-numIters = 75;
+numIters = 50;
 
 % Number of states and control inputs
 nx = 5;
@@ -87,13 +87,13 @@ Qur = 0;
 Qu = weightMatrix([Quw Qur],ns);
 
 % Quadratic penalties on the input deviation
-Qduw = (1)/(ns*(2*pi/180)^2); % none per radian squared per path step
-Qdur = (1)/(ns*(2*pi/180)^2); % none per radian squared per path step
+Qduw = (1)/(ns*(1*pi/180)^2); % none per radian squared per path step
+Qdur = (1)/(ns*(1*pi/180)^2); % none per radian squared per path step
 Qdu =  weightMatrix([Qduw Qdur],ns);
 
 % Quadratic penalties on the error
-Qephi   = (1)/(nw*(1*pi/180)^2); %(none per rad^2 per waypoint)
-Qetheta = (1)/(nw*(1*pi/180)^2); %(none per rad^2 per waypoint)
+Qephi   = (1)/(nw*(0.1*pi/180)^2); %(none per rad^2 per waypoint)
+Qetheta = (1)/(nw*(0.1*pi/180)^2); %(none per rad^2 per waypoint)
 Qev     = 0;
 Qepsi   = 0; %(none per rad^2 per waypoint)
 Qeomega = 0; %(none per rad^4 per waypoint)
@@ -107,6 +107,14 @@ Qdepsi   = 0;
 Qdeomega = 0;
 Qde =  wyptSelectionMatrix(Iw,nx,ns)*weightMatrix([Qdephi Qdetheta Qdev Qdepsi Qdeomega],ns);
 
+% Quadratic penalties on the state magnitude
+Qxphi      = 0;
+Qxtheta    = 0;
+Qxv        = 0;
+Qxpsi      = 0;
+Qxomega    = 0;
+Qx =  weightMatrix([Qxphi Qxtheta Qxv Qxpsi Qxomega],ns);
+
 % Quadratic penalties on the state deviation
 Qdxphi      = (1)/(ns*(1*pi/180)^2); %(none per rad^2 per path step)
 Qdxtheta    = (1)/(ns*(1*pi/180)^2); %(none per rad^2 per path step)
@@ -118,7 +126,7 @@ Qdx =  weightMatrix([Qdxphi Qdxtheta Qdxv Qdxpsi Qdxomega],ns);
 % Linear term on the states at the next iteration
 Sxphi   = 0;
 Sxtheta = 0;
-Sxv     = 1/(ns*2); % none per path step per mps
+Sxv     = -1/(ns*1); % none per path step per mps
 Sxpsi   = 0;
 Sxomega = 0;
 Sx = repmat([Sxphi Sxtheta Sxv Sxpsi Sxomega],[1 ns]);
@@ -137,6 +145,18 @@ pathEl          = pi/2-acos(pathPosVecs(:,3)./sqrt(sum(pathPosVecs.^2,2)));
 pathTwist       = atan2(tanVec(:,2),tanVec(:,1));
 r               = [pathAz(:) pathEl(:) zeros(ns,1) pathTwist(:) zeros(ns,1)]';
 r               = r(:);
+
+% Block lifted matrices
+QQu = [Qu + 2*Qdu -Qdu;-Qdu Qu + Qdu];
+QQe = [Qe + 2*Qde -Qde;-Qde Qe + Qde];
+QQx = [Qx + 2*Qdx -Qdx;-Qdx Qx + Qdx];
+SSx = [Sx Sx];
+qqdu = [-2*Qdu zeros(size(Qdu,1),ns*nu)];
+qqde = [-2*Qde zeros(size(Qde,1),ns*nx)];
+qqdx = [-2*Qdx zeros(size(Qdx,1),ns*nx)];
+EI = [eye(nx) zeros(nx,nx*(ns-1))];
+EF = [zeros(nx,nx*(ns-1)) eye(nx) ];
+II = [eye(ns*nx);eye(ns*nx)];
 
 %% Set up some plots
 setUpPlots
@@ -193,25 +213,29 @@ for ii = 1:numIters
     [Adp,Bdp] = disc(Acp,Bcp,Ss);
     
     % Lift the discrete, linear, path-domain model
-    [F,G] = lift(Adp,Bdp);
+    [F,H] = lift(Adp,Bdp);
     
     % Build the weighting matrices for the performance index
-    L0 = inv(Qu + Qdu + G'*(Qe + Qde + Qdx)*G);
-    Lu = L0*(     Qdu + G'*(Qe + Qde + Qdx)*G);
-    Le = L0*G'*Qe;
-    Lx = L0*G'*(Qe + Qde + Qdx)*F*Delta;
-    Lc = 0.5*L0*G'*Sx';
+    Fhat   = F*(EF - EI);
+    FF = [ Fhat ; F*EF + F*EF*Fhat - F*EI];
+    GG = -[eye(ns*nx) ; F*EF+eye(ns*nx)]*H;
+    HH = [H zeros(ns*nx,ns*nu); F*EF*H H];
+    
+    LL0 = inv(QQu + HH'*(QQe + QQx)*HH);
+    LLu = -LL0*(0.5*qqdu' + HH'*(QQe + QQx)*GG);
+    LLe = +LL0*HH'*(QQe*II + 0.5*qqde');
+    LLx = -LL0*HH'*(QQe*FF + QQx*II + QQx*FF + 0.5*qqdx');
+    LLc = -LL0*0.5*HH'*SSx';
     
     % Apply learning filters to calculate deviation in input signal
-    uilcNext = Lu*uilcPrev + Le*(r(:) - psc.stateVec.Data(:)) + Lx*psc.stateVec.Data(:) + Lc;
+    uilcNext = LLu*uilcPrev + LLe*(r(:) - psc.stateVec.Data(:)) + LLx*psc.stateVec.Data(:) + LLc;
+    uilcNext = [eye(ns*nu) zeros(ns*nu)]*uilcNext;
     
     % Break these into individual signals and put into timesignals
     uwilcNext = timesignal(timeseries(uilcNext(1:2:end),Ss));
     urilcNext = timesignal(timeseries(uilcNext(2:2:end),Ss));
     
     % Set the initial conditions for the next iteration
-%     xI = psc.stateVec.getdatasamples(1);
-%     xF = psc.stateVec.getdatasamples(numel(psc.pathVar.Time));
     initAzimuth     = xF(1);
     initElevation   = xF(2);
     initSpeed       = xF(3);
@@ -220,7 +244,7 @@ for ii = 1:numIters
     initPathVar     = sF;
     
     % Calculate predicted signals for next iteration
-    xNext = xPrev + G*(uilcNext - uilcPrev) + F*(xF-xI);
+    xNext = xPrev + H*(uilcNext - uilcPrev) + F*(xF-xI);
     eNext = r - xNext;
     
     % Calculate
@@ -242,8 +266,8 @@ for ii = 1:numIters
     JsxPrev = Sx*xPrev;
     JsxNext = Sx*xNext;
     
-    JPrev = JuPrev + JduPrev + JePrev + JdePrev + JdxPrev - JsxPrev;
-    JNext = JuNext + JduNext + JeNext + JdeNext + JdxNext - JsxNext;
+    JPrev = JuPrev + JduPrev + JePrev + JdePrev + JdxPrev + JsxPrev;
+    JNext = JuNext + JduNext + JeNext + JdeNext + JdxNext + JsxNext;
     
     % Update the plots
     updatePlots

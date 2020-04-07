@@ -18,29 +18,30 @@ nSteps  = size(A,3);
 nStates = size(A,1);
 
 % Get the dimensions of the sub-blocks in the block matrices
-% FblkDims = size(A(:,:,1));
 GblkDims = size(A(:,:,1)*B(:,:,1));
 FblkDims = size(A(:,:,1));
 
 % Preallocate F as cell array, each cell is 1 block of block matrix
 F       =  cell(nSteps,1);
-F(:)    =  {zeros(FblkDims)};
 
 % Preallocate G as cell array, each cell is 1 block of block matrix
-G       =  cell(nSteps-1,nSteps-1);
+G       =  cell(nSteps,nSteps);
 G(:)    = {zeros(GblkDims)};
 
-% Set the first elements of F and G
-F{1}    = A(:,:,1);
-G{1,1}  = B(:,:,1);
+% Set the first element
+F{1}    = eye(nStates);
 
-for ii = 2:nSteps-1 % Run each row
-    % Set the next element of F
-    F{ii} = A(:,:,ii)*F{ii-1};
-    % Set diagonal element of G
-    G{ii,ii} = B(:,:,ii); 
-    % Set the elements to the left of the one-below-diagonal element of G
-    for jj = 1:ii-1 % run over columns
+% Create F
+for ii = 2:nSteps
+    % Premultiply previous row by A at current path step
+   F{ii} = A(:,:,ii)*F{ii-1};
+end
+
+for ii = 2:nSteps % Run each row
+    % Set below-diagonal element of G
+    G{ii,ii-1} = B(:,:,ii-1); 
+    % Set the elements to the left of the below-diagonal element of G
+    for jj = 1:ii-2 % run over columns
        G{ii,jj} = A(:,:,ii-1)*G{ii-1,jj};
     end
 end

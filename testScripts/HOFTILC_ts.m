@@ -273,4 +273,7 @@ for ii = 1:numIters
     updatePlots
     
 end
-
+%%
+savePlot(h.pathFig,'output',h.pathFig.Name)
+savePlot(h.spedFig,'output',h.spedFig.Name)
+savePlot(h.perfFig,'output',h.perfFig.Name)

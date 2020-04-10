@@ -56,6 +56,6 @@ h.JsxPrev.YData = [h.JsxPrev.YData JsxPrev];
 h.JsxNext.XData = [h.JsxNext.XData ii+1];
 h.JsxNext.YData = [h.JsxNext.YData JsxNext];
 
-
+drawnow
 
 

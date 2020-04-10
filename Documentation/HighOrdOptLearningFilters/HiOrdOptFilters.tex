@@ -18,20 +18,29 @@ The goal of this document is to derive an ILC update law that inherently conside
 
 In this work iteration $j$ is the one which was just completed, iteration $j+1$ is the iteration that is about to occur but has not yet begun.  Also, assume the path is discretized into $n_s$ steps, we have $n_x$ state variables, and $n_u$ control inputs.
 
+\subsection{Lifted System Model}
+
 Assume we are given the following a path-domain lifted system model of the form
+
 \begin{equation}
 \delta x_j = H_j \delta u_j + F_j \delta x_j^0
 \end{equation}
+
 where $\delta x_j \triangleq x_{j+1} - x_j$, $\delta u_j \triangleq u_{j+1} - u_j$ and $\delta x_j^0 \triangleq x^0_{j+1} - x^0_j$.  Here, $x^0_{j+1}$ and $x^0_j$ are the initial state vectors at iteration $j$ and iteration $j+1$ respectively.  Therefore, another expression for the lifted system model is
+
 \begin{equation}
 x_{j+1} = x_j + H_j \left(u_{j+1} - u_j\right) + F_j \left(x^0_{j+1} - x^0_j\right)
 \end{equation}
-  Note that for our application the final state vector from iteration $j$ is the initial state vector for iteration $j+1$.  Therefore, we define $E_F$ and $E_I$ according to
-  \begin{align}
-  E_F &\triangleq \begin{bmatrix} \mathbb{0}^{n_x \times n_x(n_s-1)} & \mathbb{I}^{n_x \times n_x} \end{bmatrix} \\
-  E_I &\triangleq \begin{bmatrix} \mathbb{I}^{n_x \times n_x}        & \mathbb{0}^{n_x \times n_x(n_s-1)}\end{bmatrix} 
-  \end{align}
-  so that 
+
+\subsection{Estimating $x_{j+1}$ and $e_{j+1}$}
+
+Note that for our application the final state vector from iteration $j$ is the initial state vector for iteration $j+1$.  Therefore, we define $E_F$ and $E_I$ according to
+\begin{align}
+E_F &\triangleq \begin{bmatrix} \mathbb{0}^{n_x \times n_x(n_s-1)} & \mathbb{I}^{n_x \times n_x} \end{bmatrix} \\
+E_I &\triangleq \begin{bmatrix} \mathbb{I}^{n_x \times n_x}        & \mathbb{0}^{n_x \times n_x(n_s-1)}\end{bmatrix} 
+\end{align}
+
+so that 
 \begin{equation}
 \hat{F}_j \triangleq F_j \left(E_F-E_I\right)
 \end{equation}
@@ -46,12 +55,17 @@ x_{j+1}
 = & x_j + \hat{F}_j x_j - H_j u_j + H_j u_{j+1} 
 \end{align}
 
-So this is our expression for $x_{j+1}$ that will be used in the performance index later on.  Next, lets find an expression for $x_{j+2}$.  If we had already run iteration $j+1$ then we could use a lifted system that looks like this
-
+So this is our expression for $x_{j+1}$ that will be used in the performance index later on.   Next, lets look at the expressions for the error sequence, $e_{j+1}$,
 \begin{align}
-x_{j+2} = & ( \mathbb{I} + F_{j+1} ) x_{j+1} + H_{j+1} \left(u_{j+2} - u_{j+1}\right) 
+e_{j+1} 
+& = r - x_{j+1}\\
+& = r - ( x_j + \hat{F}_j x_j - H_j u_j + H_j u_{j+1} ) \\
+& = r -  x_j - \hat{F}_j x_j + H_j u_j - H_j u_{j+1} \\
+& = e_j - \hat{F}_j x_j + H_j u_j - H_j u_{j+1} 
 \end{align}
-however, we cant do that.  Instead, we use the current model to approximate the behavior at iteration $j+2$, 
+
+\subsection{Estimating $x_{j+1}$ and $e_{j+1}$}
+Next, lets find expressions for $x_{j+2}$ and $e_{j+2}$.  To estimate these quantities, I'm going to use the current lifted model.  Note that this is inherently inaccurate, since that model is based upon linearizations around trajectories from iteration $j$.  It would be nice if we could use the model based upon a linearization around the trajectories from iteration $j+1$ but since we haven't done that iteration yet, this is what we're stuck with.  Note that this further motivates the introduction of the MPC-like structure later-on wherein once we get the trajectories from iteration $j+1$ we update our model.  Anyways, the model I'm going to use looks like this
 \begin{align}
 x_{j+2} = & x_j + H_j \left(u_{j+2} - u_{j}\right) + F_j\left( x^0_{j+2}-x^0_j\right)
 \end{align}
@@ -72,26 +86,20 @@ x_{j+2}
 = & x_j + \left(F_j E_F + F_j E_F \hat{F}_j - F_j E_I\right)x_j - \left(F_j E_F +\mathbb{I} \right) H_j u_j + F_j E_F H_j u_{j+1}   + H_j u_{j+2}
 \end{align}
 
-
-Next, lets look at the expressions for error sequences, starting with $e_{j+1}$,
-\begin{align}
-e_{j+1} 
-& = r - x_{j+1}\\
-& = r - ( x_j + \hat{F}_j x_j - H_j u_j + H_j u_{j+1} ) \\
-& = r -  x_j - \hat{F}_j x_j + H_j u_j - H_j u_{j+1} \\
-& = e_j - \hat{F}_j x_j + H_j u_j - H_j u_{j+1} 
-\end{align}
-
-Next, the expression for $e_{j+2}$.
+which makes the expression for $e_{j+2}$.
 \begin{align}
 e_{j+2} 
 & = r - x_{j+2}\\
 & = r - \left(x_j + \left(F_j E_F + F_j E_F \hat{F}_j - F_j E_I\right)x_j - \left(F_j E_F +\mathbb{I} \right) H_j u_j + F_j E_F H_j u_{j+1}   + H_j u_{j+2}\right) \\
 & = r - x_j - \left(F_j E_F + F_j E_F \hat{F}_j - F_j E_I\right)x_j + \left(F_j E_F +\mathbb{I} \right) H_j u_j - F_j E_F H_j u_{j+1}   - H_j u_{j+2} \\
 & = e_j - \left(F_j E_F + F_j E_F \hat{F}_j - F_j E_I\right)x_j + \left(F_j E_F +\mathbb{I} \right) H_j u_j - F_j E_F H_j u_{j+1}   - H_j u_{j+2} \\
-\end{align}
-\section{Writing the Performance Index}
+\end{align}\
 
+\section{Deriving Optimal Learning Filters}
+The plan here is basically the same as previous work, write a performance index, differentiate it with respect to the control sequence, set the result equal to zero and solve or rearrange it to get an update law.  The slight difference is that we want to form things such that the control sequence includes the control sequence for both iterations $j+1$ and $j+2$.
+
+
+\subsection{Forming the Performance Index}
 So, I'm going to shoot for a super-generic performance index that penalizes the values of and iteration-to-iteration deviations in the control input, state, and error.  We also want to include a linear term on the states which can be used to incentive maximizing a given state.  So then I'll choose:
 \begin{align}
 J &= 
@@ -140,7 +148,7 @@ J =
 -  2 e_{j+2}^T Q_{\delta e} e_{j+1} 
 -  2 e_{j+1}^T Q_{\delta e} e_{j}   +   e_{j}^T Q_{\delta e} e_{j}   \\
 &+ x_{j+2}^T ( Q_x +   Q_{\delta x} ) x_{j+2} 
-+  x_{j+1}^T ( Q_x +   Q_{\delta x} ) x_{j+1} 
++  x_{j+1}^T ( Q_x + 2 Q_{\delta x} ) x_{j+1} 
 -  2 x_{j+2}^T Q_{\delta x} x_{j+1} 
 -  2 x_{j+1}^T Q_{\delta x} x_{j}   +   x_{j}^T Q_{\delta x} x_{j}   \\
 & + S_x x_{j+1} + S_x x_{j+2}
@@ -154,7 +162,7 @@ So now the goal is to write expressions for the state and error trajectories ove
 \mathbf{r}       \triangleq \begin{bmatrix} r       \\ r      \end{bmatrix} \\
 \mathbf{Q}_u    &\triangleq \begin{bmatrix} Q_u + 2 Q_{\delta u} & - Q_{\delta u} \\ - Q_{\delta u} & Q_u + Q_{\delta u} \end{bmatrix} \quad
 \mathbf{Q}_e     \triangleq \begin{bmatrix} Q_e + 2 Q_{\delta e} & - Q_{\delta e} \\ - Q_{\delta e} & Q_e + Q_{\delta e} \end{bmatrix} \quad
-\mathbf{Q}_x     \triangleq \begin{bmatrix} Q_u + 2 Q_{\delta x} & - Q_{\delta x} \\ - Q_{\delta x} & Q_u + Q_{\delta x} \end{bmatrix} \quad
+\mathbf{Q}_x     \triangleq \begin{bmatrix} Q_x + 2 Q_{\delta x} & - Q_{\delta x} \\ - Q_{\delta x} & Q_x + Q_{\delta x} \end{bmatrix} \quad
 \mathbf{S}_x     \triangleq \begin{bmatrix} S_x  &  S_x \end{bmatrix} \quad \\
 \mathbf{q}_{\delta u} &\triangleq \begin{bmatrix} -2 Q_{\delta u} & \mathbb{0} \end{bmatrix} \quad
 \mathbf{q}_{\delta e}  \triangleq \begin{bmatrix} -2 Q_{\delta e} & \mathbb{0} \end{bmatrix} \quad
@@ -176,6 +184,7 @@ J =
 + \mathbf{S}_x \mathbf{x}_{k+1}
 \end{align}
 
+\subsection{Differentiating the Performance Index}
 So the goal will be to differentiate this with respect to $\mathbf{u}_{k+1} $ but to do that, first we need to write $\mathbf{x}_{k+1}$ and $\mathbf{e}_{k+1}$ in terms of $\mathbf{u}_{k+1}$
 \begin{align}
 \mathbf{x}_{k+1} 
@@ -208,8 +217,6 @@ These expressions mean that
 \frac{d\mathbf{e}_{k+1} }{d\mathbf{u}_{k+1} } = -\mathbf{H}_j
 \end{align}
 
-\section{Deriving Learning Filters}
-
 So differentiating $J$ gives:
 \begin{align}
 \frac{dJ}{d\mathbf{u}_{k+1} } 
@@ -222,6 +229,8 @@ So differentiating $J$ gives:
 + \mathbf{S}_x \mathbf{H}_j
 \end{align}
 
+
+\subsection{Rearranging to Form an Update Law}
 Transposing everything
 \begin{align}
 \frac{dJ}{d\mathbf{u}_{k+1} }^T 

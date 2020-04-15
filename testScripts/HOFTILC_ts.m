@@ -159,7 +159,8 @@ EF = [zeros(nx,nx*(ns-1)) eye(nx) ];
 II = [eye(ns*nx);eye(ns*nx)];
 
 %% Set up some plots
-setUpPlots
+% setUpPlots
+setUpPaperPlots
 
 %% Run the ILC algorithm
 % Set the initial ILC inputs
@@ -201,6 +202,8 @@ for ii = 1:numIters
     uilcPrev    = psc.uilc.Data(:);
     xPrev       = psc.stateVec.Data(:);
     ePrev       = r - xPrev;
+    meanSpeed   = tsc.speed.mean;
+    iterDur     = tsc.pathVar.Time(end);
     
     % Create continuous, linear, path parmeterized model
     [Acp,Bcp] = pathLinearize(psc,...
@@ -270,10 +273,17 @@ for ii = 1:numIters
     JNext = JuNext + JduNext + JeNext + JdeNext + JdxNext + JsxNext;
     
     % Update the plots
-    updatePlots
+    %     updatePlots
+    updatePaperPlots
+    
     
 end
 %%
-savePlot(h.pathFig,'output',h.pathFig.Name)
-savePlot(h.spedFig,'output',h.spedFig.Name)
-savePlot(h.perfFig,'output',h.perfFig.Name)
+% savePlot(h.pathFig,'output',h.pathFig.Name)
+% savePlot(h.spedFig,'output',h.spedFig.Name)
+% savePlot(h.perfFig,'output',h.perfFig.Name)
+
+savePlot(h.pathShapeFig,'output',h.pathShapeFig.Name)
+savePlot(h.performanceFig,'output',h.performanceFig.Name)
+savePlot(h.waypointTrackingFig,'output',h.waypointTrackingFig.Name)
+savePlot(h.durationFig,'output',h.durationFig.Name)

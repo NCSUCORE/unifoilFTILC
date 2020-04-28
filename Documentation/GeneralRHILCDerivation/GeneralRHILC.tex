@@ -1,0 +1,215 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{bbold}
+\usepackage{soul}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage[margin=0.25in]{geometry}
+\begin{document}
+\section{Introduction}
+This document is a derivation of the general form of learning filters for receding horizon iterative learning control.  Suppose that we are given a lifted system model of the form
+\begin{align}
+x_{j+1} 
+& = x_j + G_j(u_{j+1} - u_j) + F_j x^0_j\\
+& = x_j + G_j(u_{j+1} - u_j) + \hat{F}_j x_j\\
+& = x_j + \hat{F}_j x_j + G_j(u_{j+1} - u_j) \\
+& = \left(\mathbb{I}+\hat{F}_j\right)x_j + G_j(u_{j+1} - u_j)
+\end{align}
+Then our predictions of the state sequence at $j+2$, $j+3$, and so on are
+\begin{align}
+x_{j+2} 
+& = x_j + G_j(u_{j+2}-u_j) + \hat{F}_jx_{j+1}\\
+& = x_j + G_j(u_{j+2}-u_j) + \hat{F}_j\left(x_j + G_j(u_{j+1} - u_j) + \hat{F}_j x_j\right)\\
+& = x_j + \hat{F}_j x_j    + G_j(u_{j+2}-u_j) + \hat{F}_j\left(G_j(u_{j+1} - u_j) + \hat{F}_j x_j\right)\\
+& = x_j + \hat{F}_j x_j + \hat{F}_j^2 x_j    + G_j(u_{j+2}-u_j) + \hat{F}_j G_j(u_{j+1} - u_j)\\
+& = \left(\mathbb{I} + \hat{F}_j + \hat{F}_j^2 \right)x_j +     + G_j(u_{j+2}-u_j) + \hat{F}_j G_j(u_{j+1} - u_j)
+\end{align}
+
+\begin{align}
+x_{j+3} 
+& = x_j + G_j(u_{j+3}-u_j) + \hat{F}_jx_{j+2}\\
+& = x_j + G_j(u_{j+3}-u_j) + \hat{F}_j\left(x_j + \hat{F}_j x_j + \hat{F}_j^2 x_j    + G_j(u_{j+2}-u_j) + \hat{F}_j G_j(u_{j+1} - u_j)\right)\\
+& = x_j + \hat{F}_jx_j + \hat{F}_j^2 x_j + \hat{F}_j^3x_j + G_j(u_{j+3}-u_j) + \hat{F}_j G_j(u_{j+2}-u_j) + \hat{F}_j^2 G_j(u_{j+1} - u_j)\\
+& = \left(\mathbb{I} + \hat{F}_j + \hat{F}_j^2  + \hat{F}_j^3\right)x_j  + G_j(u_{j+3}-u_j) + \hat{F}_j G_j(u_{j+2}-u_j) + \hat{F}_j^2 G_j(u_{j+1} - u_j)\\
+\end{align}
+
+So the general form for $x_{j+N}$ where $N\in \mathbb{N}^+$ is
+
+\begin{align}
+x_{j+N} 
+& = \left(\sum_{k=0}^{N}\hat{F}_j^k \right)x_j + \left( \sum_{k=0}^{N-1}\hat{F}_j^{N-1-k} G_j \left(u_{j+k+1} -u_{j} \right) \right)\\
+& = \left(\mathbb{I} + \sum_{k=1}^{N}\hat{F}_j^k \right)x_j + \left( \sum_{k=0}^{N-1}\hat{F}_j^{N-1-k} G_j \left(u_{j+k+1} -u_{j} \right) \right)\\
+\end{align}
+Therefore, if we form the uber-lyfted vectors
+\begin{align}
+\mathbf{x}_{j+1} \triangleq \begin{bmatrix} x_{j+1} \\ x_{j+2} \\ \vdots \\ x_{j+N-1} \\ x_{j+N}\end{bmatrix}, \quad 
+\mathbf{u}_{j+1} \triangleq \begin{bmatrix} u_{j+1} \\ u_{j+2} \\ \vdots \\ u_{j+N-1} \\ u_{j+N}\end{bmatrix}
+\end{align}
+then we can write an expression for $\mathbf{x}_{j+1}$ in terms of $\mathbf{u}_{j+1}$
+\begin{align}
+\mathbf{x}_{j+1} 
+& = \left( \mathbf{I} + \begin{bmatrix} \mathbb{0} \\ \hat{F}_j \\ \vdots \\ \hat{F}_j + \hdots +\hat{F}_j^{N-2}+\hat{F}_j^{N-1} \\ \hat{F}_j + \hdots +\hat{F}_j^{N-1}+\hat{F}_j^{N}\end{bmatrix}\right) x_j 
+  + \begin{bmatrix} 
+  G_j 				& \mathbb{0} 	& \mathbb{0} 	& \hdots & \mathbb{0}\\
+  \hat{F}_jG_j 		& G_j 			& \mathbb{0} 	& \hdots & \mathbb{0}\\
+  \hat{F}_j^2G_j 	& F_j G_j 		& G_j 			& \hdots & \mathbb{0}\\
+  \vdots 			& \vdots 		& \vdots 		& \ddots & \vdots\\
+  \hat{F}_j^{N-2}2G_j 	& F_j^{N-3} G_j 		& \hdots 			&  G_j & \mathbb{0}\\
+  \hat{F}_j^{N-1}2G_j 	& F_j^{N-2} G_j 		& \hdots 			& \hat{F}_j G_j & G_j\\
+  \end{bmatrix} \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right)
+\end{align}
+Here, $\mathbf{I}\triangleq \begin{bmatrix} \mathbb{I} & \hdots & \mathbb{I} \end{bmatrix}^T$If we define $\mathbf{F}_j$ to be the first matrix, and $\mathbf{G}_j$ to be the second matrix, then our system model as lifted in the iteration domain is
+\begin{align}
+\mathbf{x}_{j+1} = \left(\mathbf{I} +\mathbf{F}_j \right)x_j + \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right)
+\end{align}
+Next, form the uber-lyfted vector $\mathbf{r} \triangleq \mathbf{I} r$, then the uber-lyfted error sequence $\mathbf{e}_{j+1}$ is
+\begin{align}
+\mathbf{e}_{j+1} 
+& = \mathbf{r} - \mathbf{x}_{j+1}\\
+& = \mathbf{r} - \left(\mathbf{I} +\mathbf{F}_j \right)x_j - \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right)\\
+& = \mathbf{I} e_j - \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right)\\
+\end{align}
+Now, we want to form a performance index that includes terms for 7 things 
+\begin{itemize}
+	\item a penalty on the size of the control input for each future iteration
+	\item a penalty on the deviation in the control input for each future iteration
+	\item a penalty on the size of the state for each future iteration
+	\item a penalty on the deviation in the state for each future iteration
+	\item a penalty on the size of the error for each future iteration
+	\item a penalty on the deviation in the error for each future iteration
+	\item an economic incentive on the state for each future iteration
+\end{itemize}
+
+We can write this as
+\begin{equation}
+\begin{split}
+\mathbf{J}_{j+N} 
+= \sum_{k=1}^{N}(
+& u_{j+k}^T Q_u u_{j+k} + \left(u_{j+k+1}-u_{j+k}\right)^T Q_{\delta u} \left(u_{j+k+1}-u_{j+k}\right) \\
+& + x_{j+k}^T Q_x x_{j+k} + \left(x_{j+k+1}-x_{j+k}\right)^T Q_{\delta x} \left(x_{j+k+1}-x_{j+k}\right) \\
+& + e_{j+k}^T Q_e e_{j+k} + \left(e_{j+k+1}-e_{j+k}\right)^T Q_{\delta e} \left(e_{j+k+1}-e_{j+k}\right) \\
+& + S_x x_{j+k})
+\end{split}
+\end{equation}
+which has an equivalent block form
+\begin{equation}
+\begin{split}
+\mathbf{J}_{j+N} = 
+& \mathbf{u}_{j+1}^T \mathbf{Q_u} \mathbf{u}_{j+1} + \mathbf{u}_{j+1}^T \mathbf{D}_u^T \mathbf{Q_{\delta u}} \mathbf{D}_u \mathbf{u}_{j+1}\\
+&+\mathbf{x}_{j+1}^T \mathbf{Q_x} \mathbf{x}_{j+1} + \mathbf{x}_{j+1}^T \mathbf{D}_x^T \mathbf{Q_{\delta x}} \mathbf{D}_x \mathbf{x}_{j+1}\\
+&+\mathbf{e}_{j+1}^T \mathbf{Q_e} \mathbf{e}_{j+1} + \mathbf{e}_{j+1}^T \mathbf{D}_e^T \mathbf{Q_{\delta e}} \mathbf{D}_e \mathbf{e}_{j+1}\\
+&+\mathbf{S_x}\mathbf{x}_{j+1}
+\end{split}
+\end{equation}
+
+\begin{equation}
+\mathbf{J}_{j+N} = 
+ \mathbf{u}_{j+1}^T \left(\mathbf{Q_u} + \mathbf{D}_u^T\mathbf{Q_{\delta u}} \mathbf{D}_u\right) \mathbf{u}_{j+1}
++\mathbf{x}_{j+1}^T \left(\mathbf{Q_x} + \mathbf{D}_x^T\mathbf{Q_{\delta x}} \mathbf{D}_x \right)\mathbf{x}_{j+1}
++\mathbf{e}_{j+1}^T \left(\mathbf{Q_e} + \mathbf{D}_e^T\mathbf{Q_{\delta e}} \mathbf{D}_e \right)\mathbf{e}_{j+1}
++\mathbf{S_x}\mathbf{x}_{j+1}
+\end{equation}
+
+\begin{equation}
+\mathbf{J}_{j+N} = 
+\mathbf{u}_{j+1}^T \mathbf{\hat{Q}_u} \mathbf{u}_{j+1}\\
++\mathbf{x}_{j+1}^T \mathbf{\hat{Q}_x} \mathbf{x}_{j+1}\\
++\mathbf{e}_{j+1}^T \mathbf{\hat{Q}_e} \mathbf{e}_{j+1}\\
++\mathbf{S_x}\mathbf{x}_{j+1}
+\end{equation}
+where $\mathbf{\hat{Q}_u}$, $\mathbf{\hat{Q}_x}$, and $\mathbf{\hat{Q}_e}$ are defined appropriately
+
+Now look at the gradient of each term with respect to $\mathbf{u}_{j+1}$,
+\begin{equation}
+\frac{d}{d\mathbf{u}_{j+1}} \mathbf{u}_{j+1}^T \mathbf{\hat{Q}_u} \mathbf{u}_{j+1}  
+= 2 \mathbf{u}_{j+1}^T \mathbf{\hat{Q}_u} 
+\end{equation}
+
+\begin{align}
+\frac{d}{d\mathbf{u}_{j+1}}\mathbf{x}_{j+1}^T \mathbf{\hat{Q}_x} \mathbf{x}_{j+1}  
+& = \frac{d}{d\mathbf{u}_{j+1}}\left( \left(\mathbf{I} +\mathbf{F}_j \right)x_j + \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right) \right)^T \mathbf{\hat{Q}_x} \left( \left(\mathbf{I} +\mathbf{F}_j \right)x_j + \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right) \right) \\
+& =2 \left( \left(\mathbf{I} +\mathbf{F}_j \right)x_j + \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right) \right)^T \mathbf{\hat{Q}_x}\mathbf{G}_j 
+\end{align}
+
+\begin{align}
+\frac{d}{d\mathbf{u}_{j+1}} \mathbf{e}_{j+1}^T \mathbf{\hat{Q}_e} \mathbf{e}_{j+1} 
+& = \frac{d}{d\mathbf{u}_{j+1}} \left( \mathbf{I} e_j - \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right)\right)^T \mathbf{\hat{Q}_e} \left( \mathbf{I} e_j - \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right) \right) \\
+& = - 2  \left( \mathbf{I} e_j - \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right)\right)^T \mathbf{\hat{Q}_e} \mathbf{G}_j
+\end{align}
+
+\begin{align}
+\frac{d}{d\mathbf{u}_{j+1}} \mathbf{S}_x \mathbf{x}_{j+1} 
+& = \frac{d}{d\mathbf{u}_{j+1}} \mathbf{S}_x \left(\left(\mathbf{I} +\mathbf{F}_j \right)x_j + \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right)\right)\\
+& =  \mathbf{S}_x  \mathbf{G}_j
+\end{align}
+
+So then the gradient of the performance index is
+
+\begin{align}
+\frac{d}{d\mathbf{J}_{j+1}} 
+= 2 \mathbf{u}_{j+1}^T \mathbf{\hat{Q}_u} 
++ 2 \left( \left(\mathbf{I} +\mathbf{F}_j \right)x_j + \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right) \right)^T \mathbf{\hat{Q}_x}\mathbf{G}_j
+- 2  \left( \mathbf{I} e_j - \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right)\right)^T \mathbf{\hat{Q}_e} \mathbf{G}_j
++ \mathbf{S}_x  \mathbf{G}_j
+\end{align}
+
+Setting this equal to zero vector
+\begin{align}
+\vec{0}^T &
+= \mathbf{u}_{j+1}^T \mathbf{\hat{Q}_u} 
++ \left( \left(\mathbf{I} +\mathbf{F}_j \right)x_j + \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right) \right)^T \mathbf{\hat{Q}_x}\mathbf{G}_j
+- \left( \mathbf{I} e_j - \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right)\right)^T \mathbf{\hat{Q}_e} \mathbf{G}_j
++ \frac{1}{2}\mathbf{S}_x  \mathbf{G}_j\\
+\vec{0} &
+= \mathbf{\hat{Q}_u} \mathbf{u}_{j+1}
++ \mathbf{G}_j ^T \mathbf{\hat{Q}_x}\left( \left(\mathbf{I} +\mathbf{F}_j \right)x_j + \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right) \right)
+- \mathbf{G}_j^T \mathbf{\hat{Q}_e} \left( \mathbf{I} e_j - \mathbf{G}_j \left(\mathbf{u}_{j+1} - \mathbf{I}u_j \right)\right)
++ \frac{1}{2}\mathbf{G}_j^T\mathbf{S}_x^T
+\end{align}
+Now gather $\mathbf{u}_{j+1}$, $\mathbf{u}_{j}$, $e_j$ and $x_j$ terms.
+
+\begin{align}
+\vec{0} &
+= \left( \mathbf{\hat{Q}_u} + \mathbf{G}_j^T\left(\mathbf{\hat{Q}_x} + \mathbf{\hat{Q}_e} \right)\mathbf{G}_j  \right)\mathbf{u}_{j+1}
++ \mathbf{G}_j^T \mathbf{\hat{Q}_x} \left( \left(\mathbf{I} +\mathbf{F}_j \right)x_j - \mathbf{G}_j \mathbf{I}u_j \right)
+- \mathbf{G}_j^T \mathbf{\hat{Q}_e} \left( \mathbf{I} e_j + \mathbf{G}_j \mathbf{I}u_j \right)
++ \frac{1}{2}\mathbf{G}_j^T\mathbf{S}_x^T\\
+&
+= \left( \mathbf{\hat{Q}_u} + \mathbf{G}_j^T\left(\mathbf{\hat{Q}_x} + \mathbf{\hat{Q}_e} \right)\mathbf{G}_j  \right)\mathbf{u}_{j+1}
+- \mathbf{G}_j^T \left(\mathbf{\hat{Q}_x} + \mathbf{\hat{Q}_e}\right) \mathbf{G}_j \mathbf{I}u_j
++ \mathbf{G}_j^T \mathbf{\hat{Q}_x} \left(\mathbf{I} +\mathbf{F}_j \right)x_j
+- \mathbf{G}_j^T \mathbf{\hat{Q}_e} \mathbf{I} e_j 
++ \frac{1}{2}\mathbf{G}_j^T\mathbf{S}_x^T
+\end{align}
+Solving this for $\mathbf{u}_{j+1}$ gives the optimal learning filters and the update law
+\begin{align}
+\mathbf{u}_{j+1} & = L_u u_j + L_e e_j + L_x x_j + L_c\\
+L_0 & \triangleq \left( \mathbf{\hat{Q}_u} + \mathbf{G}_j^T\left(\mathbf{\hat{Q}_x} + \mathbf{\hat{Q}_e} \right)\mathbf{G}_j  \right)^{-1}\\
+L_u & \triangleq L_0\mathbf{G}_j^T \left(\mathbf{\hat{Q}_x} + \mathbf{\hat{Q}_e}\right) \mathbf{G}_j \mathbf{I}\\
+L_x & \triangleq -L_0\mathbf{G}_j^T \mathbf{\hat{Q}_x} \left(\mathbf{I} +\mathbf{F}_j \right)\\
+L_e & \triangleq L_0 \mathbf{G}_j^T \mathbf{\hat{Q}_e} \mathbf{I}\\
+L_c & \triangleq -\frac{1}{2}L_0\mathbf{G}_j^T\mathbf{S}_x^T
+\end{align}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

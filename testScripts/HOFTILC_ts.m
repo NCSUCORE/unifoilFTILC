@@ -8,18 +8,18 @@ T = 1500; % Simulation duration
 
 %% Kite properties
 % Physical properties
-baseMass        = 6184;
-addedMass       = 739.6;
-baseInertia     = 10000;%80302;%104850;
-addedInertia    = 10000;%724530;
+baseMass        = 2857;
+addedMass       = 134;
+baseInertia     = 24675;
+addedInertia    = 23320;%724530;
 buoyFactor      = 1;
-ARefWing        = 20;
-ARefRudder      = 1.875;
-ARefElevator    = 1.875;
+ARefWing        = 10;
+ARefRudder      = 2;
+ARefElevator    = 3;
 fuselageLength  = 8;
 wingOE          = 0.8;
 rudderOE        = 0.8;
-wingAR          = 5;
+wingAR          = 10;
 rudderAR        = 3;
 radius          = 100;
 wingTable       = buildAirfoilTable('wing',wingOE,wingAR);

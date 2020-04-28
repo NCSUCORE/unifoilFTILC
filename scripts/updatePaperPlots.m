@@ -7,6 +7,7 @@ end
 if ii == numIters
     h.achievedPathEndPlot.XData = xPrev(1:nx:end)*180/pi;
     h.achievedPathEndPlot.YData = xPrev(2:nx:end)*180/pi;
+    h.achievedPathEndPlot.DisplayName = sprintf('Last Flight Path, $j = %s$',num2str(numIters));
 end
 
 h.performancePlot.XData = [h.performancePlot.XData ii];

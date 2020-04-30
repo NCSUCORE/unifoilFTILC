@@ -76,14 +76,22 @@ xlim([1 numIters]);
 xlabel('$j$')
 
 %% Plot performance things
-h.perfIndxAx = subplot(4,2,[1 2],'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
+h.perfIndxAx = subplot(4,2,1,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
 axes(h.perfIndxAx)
 yyaxis left
 h.perfIndxPrev = scatter(nan,nan);
 yyaxis right
-h.perfIndxNext = scatter(nan,nan);
+h.perfIndxNext = scatter(nan,nan,'Marker','x');
 xlabel('$j$')
 title('Performance Index, $J_j$')
+
+h.SxAx  = subplot(4,2,2,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
+axes(h.SxAx)
+yyaxis left
+h.JsxPrev = scatter(nan,nan);
+yyaxis right
+h.JsxNext = scatter(nan,nan,'Marker','x');
+title('$S_x$ Term')
 
 h.JuAx  = subplot(4,2,3,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
 axes(h.JuAx)
@@ -101,23 +109,15 @@ yyaxis right
 h.JduNext = scatter(nan,nan,'Marker','x');
 title('$Q_{\delta u}$ Term')
 
-h.JeAx  = subplot(4,2,5,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
-axes(h.JeAx)
+h.JxAx = subplot(4,2,5,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
+axes(h.JxAx)
 yyaxis left
-h.JePrev = scatter(nan,nan);
+h.JxPrev = scatter(nan,nan);
 yyaxis right
-h.JeNext = scatter(nan,nan,'Marker','x');
-title('$Q_e$ Term')
+h.JxNext = scatter(nan,nan,'Marker','x');
+title('$Q_{x}$ Term')
 
-h.JdeAx = subplot(4,2,6,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
-axes(h.JdeAx)
-yyaxis left
-h.JdePrev = scatter(nan,nan);
-yyaxis right
-h.JdeNext = scatter(nan,nan,'Marker','x');
-title('$Q_{\delta e}$ Term')
-
-h.JdxAx = subplot(4,2,7,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
+h.JdxAx = subplot(4,2,6,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
 axes(h.JdxAx)
 yyaxis left
 h.JdxPrev = scatter(nan,nan);
@@ -125,13 +125,21 @@ yyaxis right
 h.JdxNext = scatter(nan,nan,'Marker','x');
 title('$Q_{\delta x}$ Term')
 
-h.SxAx  = subplot(4,2,8,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
-axes(h.SxAx)
+h.JeAx  = subplot(4,2,7,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
+axes(h.JeAx)
 yyaxis left
-h.JsxPrev = scatter(nan,nan);
+h.JePrev = scatter(nan,nan);
 yyaxis right
-h.JsxNext = scatter(nan,nan,'Marker','x');
-title('$S_x$ Term')
+h.JeNext = scatter(nan,nan,'Marker','x');
+title('$Q_e$ Term')
+
+h.JdeAx = subplot(4,2,8,'NextPlot','add','XGrid','on','YGrid','on','Parent',h.perfFig);
+axes(h.JdeAx)
+yyaxis left
+h.JdePrev = scatter(nan,nan);
+yyaxis right
+h.JdeNext = scatter(nan,nan,'Marker','x');
+title('$Q_{\delta e}$ Term')
 
 set(findall(gcf,'Type','Axes'),'XLim',[1 numIters])
 

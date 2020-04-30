@@ -132,7 +132,6 @@ Sxpsi   = 0;
 Sxomega = 0;
 Sx = repmat([Sxphi Sxtheta Sxv Sxpsi Sxomega],[1 ns]);
 
-
 % Difference operator matrices, DD
 DDu = cell(predHoriz-1,predHoriz); % Super blocks N_i-1 by N_i
 DDu(:) = {zeros(ns*nu,ns*nu)}; % Set all to zero matrices
@@ -153,8 +152,7 @@ DDe = DDx; % Difference operator for error is the same as for x
 [pathPosVecs,tanVec]     = lemOfGerono(Ss,basisParams);
 pathAz          = atan2(pathPosVecs(:,2),pathPosVecs(:,1));
 pathEl          = pi/2-acos(pathPosVecs(:,3)./sqrt(sum(pathPosVecs.^2,2)));
-pathTwist       = atan2(tanVec(:,2),tanVec(:,1));
-r               = [pathAz(:) pathEl(:) zeros(ns,1) pathTwist(:) zeros(ns,1)]';
+r               = [pathAz(:) pathEl(:) zeros(ns,1) zeros(ns,1) zeros(ns,1)]';
 r               = r(:);
 
 % Block lifted matrices
@@ -192,7 +190,7 @@ SSx = cell(1,predHoriz);
 SSx(:) = {Sx};
 SSx = cell2mat(SSx);
 
-% Super block final sequence extraction matrices
+% Super block first sequence extraction matrices
 EEu = [eye(ns*nu) zeros(ns*nu,ns*nu*(predHoriz-1))];
 EEx = [eye(ns*nx) zeros(ns*nx,ns*nx*(predHoriz-1))];
 EEe = EEx;
@@ -213,8 +211,8 @@ EF = [zeros(nx,nx*(ns-1)) eye(nx) ];
 
 
 %% Set up some plots
-setUpPlots
-% setUpPaperPlots
+% setUpPlots
+setUpPaperPlots
 
 %% Run the ILC algorithm
 % Set the initial ILC inputs
@@ -273,14 +271,16 @@ for ii = 1:numIters
     [F,G] = lift(Adp,Bdp);
     
     % Build the weighting matrices for the performance index
-    % Super-lifted model block matrices
+    % Super-lifted model F matrix
     FF = cell(predHoriz,1);
-    FF(1) = {eye(size(F*EF))};
+    FF{1} = F*(EF-EI);
     for jj = 2:predHoriz
-        FF(jj) = {F*EF*FF{jj-1}};
+        str = repmat('F*EF*',[1 jj-1]);
+        FF(jj) = {FF{jj-1}+eval([str 'F*(EF-EI)'])};
     end
     FF = cell2mat(FF)*F*(EF-EI);
     
+    % Super-lifted model G matrix
     GG = cell(predHoriz,predHoriz);
     GG(:) = {zeros(size(G))};
     GG(1:predHoriz+1:end) = {G};
@@ -293,14 +293,14 @@ for ii = 1:numIters
     
     % Learning Filters
     L0 = inv(QQhatu + GG'*(QQhatx + QQhate)*GG);
-    Lu = L0*(EEu'*Qu + GG'*(QQhatx + QQhate)*GG*IIu);
-    Lx = L0*GG'*(EEx'*Qx - QQhatx*IIx - QQhatx*FF - QQhate*FF);
-    Le = L0*GG'*(QQhate*IIe - EEe'*Qe);
+    Lu = L0*(EEu'*Qdu + GG'*(QQhatx + QQhate)*GG*IIu);
+    Lx = L0*GG'*(EEx'*Qdx - QQhatx*IIx - QQhatx*FF - QQhate*FF);
+    Le = L0*GG'*(QQhate*IIe - EEe'*Qde);
     Lc = -0.5*L0*GG'*SSx';
     
     % Apply learning filters to calculate deviation in input signal
     uilcNext = Lu*uilcPrev + Le*(r(:) - psc.stateVec.Data(:)) + Lx*psc.stateVec.Data(:) + Lc;
-    uilcNext = [eye(ns*nu) zeros(ns*nu)]*uilcNext;
+    uilcNext = [eye(ns*nu) zeros(ns*nu*(predHoriz-1))]*uilcNext;
     
     % Break these into individual signals and put into timesignals
     uwilcNext = timesignal(timeseries(uilcNext(1:2:end),Ss));
@@ -318,21 +318,24 @@ for ii = 1:numIters
     xNext = xPrev + G*(uilcNext - uilcPrev) + F*(xF-xI);
     eNext = r - xNext;
     
-    % Calculate
+    % Calculate performance and components of performance
     JuPrev = uilcPrev'*Qu*uilcPrev;
     JuNext = uilcNext'*Qu*uilcNext;
     
     JduPrev = duilcPrev'*Qdu*duilcPrev;
     JduNext = (uilcNext - uilcPrev)'*Qdu*(uilcNext - uilcPrev);
     
+    JxPrev = xPrev'*Qx*xPrev;
+    JxNext = xNext'*Qx*xNext;
+    
+    JdxPrev = dxPrev'*Qdx*dxPrev;
+    JdxNext = (xNext - xPrev)'*Qdx*(xNext - xPrev);
+    
     JePrev = ePrev'*Qe*ePrev;
     JeNext = eNext'*Qe*eNext;
     
     JdePrev = dePrev'*Qde*dePrev;
     JdeNext = (eNext - ePrev)'*Qde*(eNext - ePrev);
-    
-    JdxPrev = dxPrev'*Qdx*dxPrev;
-    JdxNext = (xNext - xPrev)'*Qdx*(xNext - xPrev);
     
     JsxPrev = Sx*xPrev;
     JsxNext = Sx*xNext;
@@ -341,8 +344,8 @@ for ii = 1:numIters
     JNext = JuNext + JduNext + JeNext + JdeNext + JdxNext + JsxNext;
     
     % Update the plots
-        updatePlots
-%     updatePaperPlots
+%     updatePlots
+        updatePaperPlots
     
     
 end

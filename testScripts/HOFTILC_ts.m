@@ -229,7 +229,9 @@ for ii = 1:numIters
     LLe = +LL0*HH'*(QQe*II + 0.5*qqde');
     LLx = -LL0*HH'*(QQe*FF + QQx*II + QQx*FF + 0.5*qqdx');
     LLc = -LL0*0.5*HH'*SSx';
-    
+%     GGOld = HH;
+%     FFOld = FF;
+%     save('learnFiltOld','LL0','LLu','LLe','LLx','LLc','GGOld','FFOld');
     % Apply learning filters to calculate deviation in input signal
     uilcNext = LLu*uilcPrev + LLe*(r(:) - psc.stateVec.Data(:)) + LLx*psc.stateVec.Data(:) + LLc;
     uilcNext = [eye(ns*nu) zeros(ns*nu)]*uilcNext;
